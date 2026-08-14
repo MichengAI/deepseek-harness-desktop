@@ -40,13 +40,14 @@ DeepSeek Harness Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/d
 
 | 平台 | 文件 | 发布状态 |
 | --- | --- | --- |
-| Windows x64 | **.exe** 安装器 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-win-x64.exe) |
-| Windows x64 | **.zip** 压缩包 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-win-x64.zip) |
-| macOS Apple Silicon | **.dmg** 安装器 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-mac-arm64.dmg) |
-| macOS Intel | **.dmg** 安装器 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-mac-x64.dmg) |
+| Windows x64 | **.exe** 安装器 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-win-x64.exe) |
+| Windows x64 | **.zip** 压缩包 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-win-x64.zip) |
+| macOS Apple Silicon | **.dmg** 安装器 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-mac-arm64.dmg) |
+| macOS Intel | **.dmg** 安装器 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-mac-x64.dmg) |
+| Linux x64 | **.AppImage** | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-linux-x86_64.AppImage) |
+| Debian / Ubuntu x64 | **.deb** 安装包 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-linux-amd64.deb) |
 
 全部当前与历史安装包请从 [GitHub Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases) 获取。
-Linux x64 的 **.AppImage** 与 Debian / Ubuntu x64 的 **.deb** 将在下一次标签发布时提供。
 
 ## 界面预览
 

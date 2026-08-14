@@ -40,13 +40,14 @@ Download supported packages from [GitHub Releases](https://github.com/MichengAI/
 
 | Platform | Package | Release status |
 | --- | --- | --- |
-| Windows x64 | **.exe** installer | Available · [Download](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-win-x64.exe) |
-| Windows x64 | **.zip** archive | Available · [Download](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-win-x64.zip) |
-| macOS Apple Silicon | **.dmg** installer | Available · [Download](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-mac-arm64.dmg) |
-| macOS Intel | **.dmg** installer | Available · [Download](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-mac-x64.dmg) |
+| Windows x64 | **.exe** installer | Available · [Download](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-win-x64.exe) |
+| Windows x64 | **.zip** archive | Available · [Download](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-win-x64.zip) |
+| macOS Apple Silicon | **.dmg** installer | Available · [Download](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-mac-arm64.dmg) |
+| macOS Intel | **.dmg** installer | Available · [Download](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-mac-x64.dmg) |
+| Linux x64 | **.AppImage** | Available · [Download](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-linux-x86_64.AppImage) |
+| Debian / Ubuntu x64 | **.deb** package | Available · [Download](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-linux-amd64.deb) |
 
 All current and historical packages are available from [GitHub Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases).
-Linux x64 **.AppImage** and Debian/Ubuntu x64 **.deb** packages will be available with the next tagged release.
 
 ## Screenshots
 
