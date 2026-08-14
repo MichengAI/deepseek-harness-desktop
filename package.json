@@ -1,6 +1,6 @@
 {
   "name": "deepseek-harness-desktop",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "DeepSeek Harness 原生桌面启动器",
   "author": "MichengAI",
   "private": true,
