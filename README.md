@@ -1,85 +1,114 @@
 # DeepSeek Harness Desktop
 
-[English](#english) | [中文](#中文)
+<p align="center">
+  <strong>A native Windows desktop launcher for DeepSeek Harness.</strong>
+</p>
 
-## 中文
+<p align="center">
+  <a href="README.zh-CN.md">简体中文</a> ·
+  <a href="https://github.com/MichengAI/deepseek-harness-desktop/releases">Download</a> ·
+  <a href="https://github.com/MichengAI/deepseek-harness-desktop/issues">Report an issue</a>
+</p>
 
-DeepSeek Harness Desktop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的 Windows x64 桌面启动器。它将 DSH Web 界面封装为原生桌面应用，并随安装包提供运行所需的 Node.js 与 DSH 运行时。
+> **Preview release.** DeepSeek Harness Desktop is a community-maintained Windows distribution project. It is not an official DeepSeek AI product.
 
-### 功能
+DeepSeek Harness Desktop packages the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) web experience as a native Windows application. It bundles the required Node.js runtime, starts DSH locally, and opens the interface in a dedicated desktop window.
 
-- 启动本地 DSH Web 会话，无需预先安装 Node.js。
-- 保留 DeepSeek Harness 的工作区、会话、模型、插件和 Agent 预设能力。
-- 支持中文界面、浅色 / 深色 / 跟随系统主题，以及默认权限和发送行为设置。
-- 仅加载本机 `127.0.0.1` 服务；窗口关闭后最小化到托盘，可从托盘恢复或退出。
+## Download
 
-### 安装与使用
+Download the latest Windows x64 installer from [GitHub Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases).
 
-1. 前往 [Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases) 下载最新的 `DeepSeek Harness Desktop-*-x64.exe`。
-2. 运行安装程序，完成安装后启动 **DeepSeek Harness Desktop**。
-3. 首次启动时，应用会在本机启动 DSH 服务并打开桌面窗口。
+| Package | Recommended for |
+| --- | --- |
+| **DeepSeek Harness Desktop-*-x64.exe** | Most Windows users |
+| **DeepSeek Harness Desktop-*-x64.zip** | Portable or manual deployment |
 
-安装包包含完整运行时，安装阶段可能需要数分钟。请等待安装程序完成，不要在进度停留时立即取消。
+Only download installers from this repository's Releases page. Unsigned preview builds may display a Windows SmartScreen warning.
 
-### 开发
+## Screenshots
 
-前提：Windows、Node.js 24、pnpm 11，以及已构建的 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 源码。
+<p align="center">
+  <img src="assets/screenshots/workspace-session.png" alt="Workspace and coding review session" width="960">
+</p>
 
-```powershell
+<p align="center">
+  <em>Workspace, session timeline, tool activity, and model controls.</em>
+</p>
+
+<p align="center">
+  <img src="assets/screenshots/settings.png" alt="Desktop settings" width="960">
+</p>
+
+<p align="center">
+  <em>Language, theme, default permission mode, and Agent preset settings.</em>
+</p>
+
+## What it provides
+
+- **Windows-native startup** — installs and launches DeepSeek Harness without a separate Node.js installation.
+- **Local DSH runtime** — starts DSH on a randomly assigned loopback port and renders it in an Electron window.
+- **Focused desktop workflow** — uses the existing DSH workspace, session, model, plugin, and Agent preset capabilities.
+- **Desktop behavior** — single-instance protection, system-tray controls, and safe handling of external links.
+- **Continuity with DSH CLI** — reuses the current user's DSH home directory, including existing settings and sessions.
+
+## Requirements
+
+| Item | Requirement |
+| --- | --- |
+| Operating system | Windows 10 or Windows 11 |
+| Architecture | x64 |
+| Network | Required only for the model providers and tools you configure |
+| Node.js | Not required for end users; bundled with the application |
+
+## Install and get started
+
+1. Download the latest **.exe** installer from [Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases).
+2. Run the installer and launch **DeepSeek Harness Desktop**.
+3. Wait for the local DSH service to start, then create or open a workspace and session.
+4. Configure models, plugins, permissions, and Agent presets in DSH settings as needed.
+
+The installer bundles a complete runtime. Installation and first startup can take several minutes on some machines; allow the process to finish before cancelling.
+
+## Privacy and security
+
+- The launcher accepts and loads only validated local HTTP addresses on **127.0.0.1**.
+- External HTTP(S) links open in the system browser; file, JavaScript, and data URLs are blocked.
+- Electron runs with Node.js integration disabled, context isolation enabled, and sandboxing enabled.
+- DSH configuration, sessions, and credentials remain in **%USERPROFILE%\.dsh**. Uninstalling the desktop launcher does not remove that directory.
+- The launcher does not expose Electron IPC APIs to the DSH page.
+
+Your configured model providers and DSH tools may make their own network requests. Review their respective settings and policies before use.
+
+## Troubleshooting
+
+| Situation | What to do |
+| --- | --- |
+| Installation appears to pause | Wait several minutes. The installer is extracting the bundled runtime. |
+| Windows SmartScreen appears | Verify the download came from this repository's Releases page; preview builds are not yet code-signed. |
+| Startup fails | Reopen the app and check the diagnostic path shown in the error window. |
+| Existing DSH data is not visible | Confirm you are using the same Windows account and inspect %USERPROFILE%\.dsh. |
+
+## Development
+
+Development requires Windows, Node.js 24.19.0, pnpm 11.20.0, and a built checkout of DeepSeek Harness.
+
+~~~powershell
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 pnpm install --frozen-lockfile
 pnpm test
 $env:DSH_RUNTIME_ROOT = 'D:\Repository\deepseek-harness'
 pnpm run dist
-```
+~~~
 
-构建产物位于本地 `dist\`，该目录不会提交到仓库。发布版本时推送 `vX.Y.Z` 标签，GitHub Actions 会自动创建 Release 并上传安装包。
+Build output is written locally to **release\** and is not committed. Pushing a **vX.Y.Z** tag runs the Windows packaging workflow and creates a GitHub Release.
 
-### 安全与数据
+## Support and contribution
 
-- DSH 服务仅监听本机回环地址。
-- 桌面窗口关闭 Node.js 集成并启用沙箱。
-- DSH 配置与数据保存在当前 Windows 用户的应用数据目录中。
+- Report defects and feature requests through [GitHub Issues](https://github.com/MichengAI/deepseek-harness-desktop/issues).
+- Before submitting a pull request, run the test suite and keep user-facing text in Simplified Chinese where applicable.
+- See the upstream [DeepSeek Harness repository](https://github.com/deepseek-ai/deepseek-harness) for DSH-specific functionality and documentation.
 
----
+## License
 
-## English
-
-DeepSeek Harness Desktop is a Windows x64 desktop launcher for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). It wraps the DSH web interface in a native desktop application and bundles the Node.js and DSH runtimes required to run it.
-
-### Features
-
-- Starts local DSH web sessions without a separate Node.js installation.
-- Preserves DeepSeek Harness workspaces, sessions, models, plugins, and Agent presets.
-- Supports Chinese UI, light / dark / system themes, default permission modes, and send behavior settings.
-- Loads only the local `127.0.0.1` service; closing the window minimizes it to the tray, where it can be restored or quit.
-
-### Install and use
-
-1. Download the latest `DeepSeek Harness Desktop-*-x64.exe` from [Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases).
-2. Run the installer and start **DeepSeek Harness Desktop** after installation.
-3. On first launch, the application starts a local DSH service and opens the desktop window.
-
-The installer includes the complete runtime and may take several minutes to finish. Please allow it to complete before cancelling.
-
-### Development
-
-Prerequisites: Windows, Node.js 24, pnpm 11, and a built checkout of [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
-
-```powershell
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
-pnpm install --frozen-lockfile
-pnpm test
-$env:DSH_RUNTIME_ROOT = 'D:\Repository\deepseek-harness'
-pnpm run dist
-```
-
-Build output is kept locally in `dist\` and is not committed. Push a `vX.Y.Z` tag to create a GitHub Release and upload the installer automatically.
-
-### Security and data
-
-- The DSH service listens only on the local loopback address.
-- The desktop window disables Node.js integration and enables sandboxing.
-- DSH configuration and data are stored in the current Windows user's application data directory.
+No project license has been declared in this repository yet. Please obtain permission from the repository owner before redistributing the source code or binaries.

@@ -31,10 +31,22 @@ export function resolveDshRuntime(options: RuntimeResolutionOptions): DshRuntime
 
 /** 开发态使用 PATH 中的 Node，安装包优先使用随包 Node。 */
 export function resolveNodeExecutable(options: Pick<RuntimeResolutionOptions, 'isPackaged' | 'resourcesPath'>): string {
+  const bundledNode = join(options.resourcesPath, 'node', process.platform === 'win32' ? 'node.exe' : 'node')
+  if (options.isPackaged) {
+    if (existsSync(bundledNode)) return bundledNode
+    throw new Error(`未找到随包 Node：${bundledNode}`)
+  }
+
   if (process.env.DSH_NODE_EXECUTABLE) return process.env.DSH_NODE_EXECUTABLE
 
-  const bundledNode = join(options.resourcesPath, 'node', process.platform === 'win32' ? 'node.exe' : 'node')
-  if (options.isPackaged && existsSync(bundledNode)) return bundledNode
-
   return process.platform === 'win32' ? 'node.exe' : 'node'
+}
+
+/** 查找控制 DSH 优雅关闭的 Node 引导脚本。 */
+export function resolveDshBootstrap(options: RuntimeResolutionOptions): string {
+  const bootstrap = options.isPackaged
+    ? join(options.resourcesPath, 'bootstrap.mjs')
+    : resolve(options.appPath, 'dist', 'src', 'dsh-bootstrap.mjs')
+  if (existsSync(bootstrap)) return bootstrap
+  throw new Error(`未找到 DSH 启动引导脚本：${bootstrap}`)
 }

@@ -5,11 +5,20 @@
   "author": "MichengAI",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.20.0",
+  "engines": {
+    "node": "24.19.0",
+    "pnpm": "11.20.0"
+  },
+  "config": {
+    "bundledNodeVersion": "v24.19.0",
+    "bundledNodeSha256": "3602F2BB1A10F2CBAB4C36886218A33C1AB3DB87290E73B033C46C77147D0237"
+  },
   "main": "dist/src/main.js",
   "scripts": {
     "build": "tsc",
     "check": "tsc --noEmit",
-    "test": "pnpm run build && node --test dist/test/readiness.test.js",
+    "test": "pnpm run build && node --test dist/test/*.test.js",
     "start": "pnpm run build && electron .",
     "prepare-runtime": "pnpm run build && node dist/scripts/prepare-runtime.js",
     "pack": "pnpm run prepare-runtime && electron-builder --dir",
@@ -25,8 +34,11 @@
     "appId": "ai.micheng.deepseekHarnessDesktop",
     "productName": "DeepSeek Harness Desktop",
     "asar": true,
+    "directories": {
+      "output": "release"
+    },
     "files": [
-      "dist/**",
+      "dist/src/**",
       "package.json"
     ],
     "extraResources": [
@@ -50,6 +62,10 @@
         "filter": [
           "**/*"
         ]
+      },
+      {
+        "from": "dist\\src\\dsh-bootstrap.mjs",
+        "to": "bootstrap.mjs"
       }
     ],
     "win": {

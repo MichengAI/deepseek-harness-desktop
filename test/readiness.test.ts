@@ -12,6 +12,8 @@ test('拒绝非本机或不安全的就绪地址', () => {
   assert.equal(parseReadyUrl('dsh web: https://127.0.0.1:10406'), undefined)
   assert.equal(parseReadyUrl('dsh web: http://localhost:10406'), undefined)
   assert.equal(parseReadyUrl('dsh web: http://127.0.0.1:0'), undefined)
+  assert.equal(parseReadyUrl('dsh web: javascript:alert(1)'), undefined)
+  assert.equal(parseReadyUrl('dsh web: data:text/html,unsafe'), undefined)
 })
 
 test('开发态使用 PATH 中的 Node', () => {
@@ -23,4 +25,11 @@ test('开发态使用 PATH 中的 Node', () => {
     if (original === undefined) delete process.env.DSH_NODE_EXECUTABLE
     else process.env.DSH_NODE_EXECUTABLE = original
   }
+})
+
+test('打包态缺少随包 Node 时失败', () => {
+  assert.throws(
+    () => resolveNodeExecutable({ isPackaged: true, resourcesPath: 'C:\\missing-runtime' }),
+    /未找到随包 Node/,
+  )
 })

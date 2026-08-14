@@ -1,12 +1,25 @@
 import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { cp, mkdir, readFile, readdir, realpath, rm } from 'node:fs/promises'
+import { cp, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises'
 import { join, resolve, sep } from 'node:path'
 
 const projectRoot = resolve(import.meta.dirname, '..', '..')
 const sourceRoot = resolve(process.env.DSH_RUNTIME_ROOT ?? join(projectRoot, '..', 'deepseek-harness'))
 const runtimeRoot = join(projectRoot, 'runtime')
 const nodeRoot = join(projectRoot, 'runtime-node')
+const projectManifest = JSON.parse(await readFile(join(projectRoot, 'package.json'), 'utf8')) as {
+  config?: { bundledNodeSha256?: unknown, bundledNodeVersion?: unknown }
+}
+const expectedNodeVersion = projectManifest.config?.bundledNodeVersion
+const expectedNodeSha256 = projectManifest.config?.bundledNodeSha256
+
+if (typeof expectedNodeVersion !== 'string' || typeof expectedNodeSha256 !== 'string') {
+  throw new Error('package.json 缺少随包 Node 的版本或 SHA256 配置。')
+}
+if (process.version !== expectedNodeVersion) {
+  throw new Error('随包 Node 版本不匹配：需要 ' + expectedNodeVersion + '，实际 ' + process.version + '。')
+}
 
 if (!existsSync(join(sourceRoot, 'apps', 'cli', 'lib', 'bin.js'))) {
   throw new Error(`未找到已构建 DSH：${sourceRoot}`)
@@ -46,8 +59,13 @@ if (!existsSync(join(runtimeRoot, 'node_modules', '@deepseek-ai', 'cordis-plugin
 }
 
 const nodeExecutable = process.execPath
+const nodeSha256 = createHash('sha256').update(await readFile(nodeExecutable)).digest('hex').toUpperCase()
+if (nodeSha256 !== expectedNodeSha256) {
+  throw new Error('随包 Node SHA256 不匹配：' + nodeSha256 + '。')
+}
 await mkdir(nodeRoot, { recursive: true })
 await cp(nodeExecutable, join(nodeRoot, process.platform === 'win32' ? 'node.exe' : 'node'))
+await writeFile(join(nodeRoot, 'node.sha256'), nodeSha256 + '\n', 'utf8')
 
 console.log(`已装配 DSH 运行时：${runtimeRoot}`)
 console.log(`已装配 Node 运行时：${nodeRoot}`)

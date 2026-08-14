@@ -1,24 +1,29 @@
-import { app, BrowserWindow, Menu, Tray, nativeImage } from 'electron'
+import { app, BrowserWindow, Menu, Tray, nativeImage, shell } from 'electron'
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { startDsh, type DshServer } from './dsh-process.js'
-import { resolveDshRuntime, resolveNodeExecutable } from './runtime.js'
+import { isExternalHttpUrl, isSameOrigin } from './navigation.js'
+import { resolveDshBootstrap, resolveDshRuntime, resolveNodeExecutable } from './runtime.js'
 
 let mainWindow: BrowserWindow | undefined
 let server: DshServer | undefined
 let tray: Tray | undefined
 let isQuitting = false
 
-if (!app.requestSingleInstanceLock()) app.quit()
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on('second-instance', () => showMainWindow())
+  app.on('before-quit', event => {
+    if (isQuitting || server === undefined) return
+    event.preventDefault()
+    isQuitting = true
+    void server.stop().finally(() => app.exit())
+  })
 
-app.on('second-instance', () => showMainWindow())
-app.on('before-quit', () => {
-  isQuitting = true
-  server?.stop()
-})
-
-void startApplication()
+  void startApplication()
+}
 
 async function startApplication(): Promise<void> {
   await app.whenReady()
@@ -32,33 +37,52 @@ async function startApplication(): Promise<void> {
     }
     const runtime = resolveDshRuntime(runtimeOptions)
     server = await startDsh({
+      bootstrapPath: resolveDshBootstrap(runtimeOptions),
+      onUnexpectedExit: handleUnexpectedDshExit,
       runtime,
-      userDataPath: app.getPath('userData'),
       nodeExecutable: resolveNodeExecutable(runtimeOptions),
     })
     createMainWindow(server.url)
   } catch (error) {
-    const message = error instanceof Error ? error.message : '未知启动错误。'
-    await writeFile(join(app.getPath('userData'), 'startup-error.log'), `${message}\n`, 'utf8').catch(() => undefined)
-    createErrorWindow(message)
+    await reportStartupFailure(error)
   }
 }
 
 function createMainWindow(serverUrl: string): void {
   mainWindow = createWindow()
   const allowedOrigin = new URL(serverUrl).origin
-  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (isExternalHttpUrl(url, allowedOrigin)) void shell.openExternal(url)
+    return { action: 'deny' }
+  })
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (new URL(url).origin !== allowedOrigin) event.preventDefault()
+    if (isSameOrigin(url, allowedOrigin)) return
+    event.preventDefault()
+    if (isExternalHttpUrl(url, allowedOrigin)) void shell.openExternal(url)
   })
   void mainWindow.loadURL(serverUrl)
 }
 
 function createErrorWindow(message: string): void {
-  mainWindow = createWindow()
+  mainWindow ??= createWindow()
   const escaped = message.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] ?? character)
   void mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`<main><h1>启动失败</h1><p>${escaped}</p></main>`)}`)
 }
+
+async function reportStartupFailure(error: unknown): Promise<void> {
+  const logPath = join(app.getPath('userData'), 'startup-error.log')
+  const message = error instanceof Error ? error.message : '未知启动错误。'
+  await writeFile(logPath, `${message}\n`, 'utf8').catch(() => undefined)
+  createErrorWindow(`DSH 启动失败。诊断日志：${logPath}`)
+}
+
+function handleUnexpectedDshExit(message: string): void {
+  if (isQuitting) return
+  server = undefined
+  void writeFile(join(app.getPath('userData'), 'startup-error.log'), `${message}\n`, 'utf8').catch(() => undefined)
+  createErrorWindow(`DSH 已停止运行。请重新启动应用。`)
+}
+
 
 function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
