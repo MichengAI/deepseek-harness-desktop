@@ -59,8 +59,9 @@ jobs:
         run: |
           [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
           $OutputEncoding = [System.Text.Encoding]::UTF8
-          $logPath = Join-Path $env:GITHUB_WORKSPACE 'ci-logs\dsh-build.log'
-          New-Item -ItemType Directory -Force -Path (Split-Path -Parent $logPath) | Out-Null
+          $logDirectory = Join-Path $env:GITHUB_WORKSPACE 'ci-logs'
+          $logPath = Join-Path $logDirectory 'dsh-build.log'
+          New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
           & pnpm install --frozen-lockfile 2>&1 | Tee-Object -FilePath $logPath
           $exitCode = $LASTEXITCODE
           if ($exitCode -ne 0) { exit $exitCode }
@@ -73,7 +74,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dsh-build-log-${{ matrix.platform }}
-          path: ci-logs\dsh-build.log
+          path: ci-logs/dsh-build.log
           if-no-files-found: error
           retention-days: 7
 
