@@ -22,7 +22,7 @@
     "start": "pnpm run build && electron .",
     "prepare-runtime": "pnpm run build && node dist/scripts/prepare-runtime.js",
     "pack": "pnpm run prepare-runtime && electron-builder --dir",
-    "dist": "pnpm run prepare-runtime && electron-builder"
+    "dist": "pnpm run prepare-runtime && electron-builder --publish never"
   },
   "devDependencies": {
     "@types/node": "26.2.0",
