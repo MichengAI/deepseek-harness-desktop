@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icon.png" alt="DeepSeek Harness Desktop" width="128">
+  <img src="assets/icon.png" alt="DeepSeek Harness Desktop" width="96">
 </p>
 
 <h1 align="center">DeepSeek Harness Desktop</h1>
@@ -9,9 +9,20 @@
 </p>
 
 <p align="center">
-  <a href="README.zh-CN.md">简体中文</a> ·
   <a href="https://github.com/MichengAI/deepseek-harness-desktop/releases">Download</a> ·
   <a href="https://github.com/MichengAI/deepseek-harness-desktop/issues">Report an issue</a>
+</p>
+
+<p align="center">
+  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/MichengAI/deepseek-harness-desktop/releases"><img src="https://img.shields.io/github/v/release/MichengAI/deepseek-harness-desktop?display_name=tag&label=release" alt="Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-yellow.svg" alt="MIT License"></a>
+  <a href="https://github.com/MichengAI/deepseek-harness-desktop/actions/workflows/desktop-package.yml"><img src="https://github.com/MichengAI/deepseek-harness-desktop/actions/workflows/desktop-package.yml/badge.svg?branch=main" alt="Desktop package"></a>
+  <img src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-000000?logo=apple&logoColor=white" alt="macOS Apple Silicon and Intel">
+  <img src="https://img.shields.io/badge/Windows-x64-0078D4?logo=windows&logoColor=white" alt="Windows x64">
 </p>
 
 <p align="center">
@@ -121,4 +132,4 @@ Project status, active work, architecture constraints, and iteration records are
 
 ## License
 
-No project license has been declared in this repository yet. Please obtain permission from the repository owner before redistributing the source code or binaries.
+This project is licensed under the [MIT License](LICENSE).

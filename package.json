@@ -4,6 +4,7 @@
   "description": "DeepSeek Harness 原生桌面启动器",
   "author": "MichengAI",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@11.20.0",
   "engines": {
