@@ -39,6 +39,7 @@
   "build": {
     "appId": "ai.micheng.deepseekHarnessDesktop",
     "productName": "DeepSeek Harness Desktop",
+    "icon": "assets/icon.png",
     "asar": true,
     "afterSign": "dist/scripts/notarize.mjs",
     "directories": {
@@ -76,6 +77,7 @@
       }
     ],
     "win": {
+      "icon": "assets/icons/icon.ico",
       "target": [
         "nsis",
         "zip"
@@ -83,6 +85,7 @@
       "artifactName": "${productName}-${version}-win-${arch}.${ext}"
     },
     "mac": {
+      "icon": "assets/icons/icon.icns",
       "category": "public.app-category.developer-tools",
       "target": [
         "dmg",

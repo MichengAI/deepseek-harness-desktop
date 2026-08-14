@@ -1,4 +1,8 @@
-# DeepSeek Harness Desktop
+<p align="center">
+  <img src="assets/icon.png" alt="DeepSeek Harness Desktop" width="128">
+</p>
+
+<h1 align="center">DeepSeek Harness Desktop</h1>
 
 <p align="center">
   <strong>A native desktop launcher for DeepSeek Harness on Windows and macOS.</strong>
@@ -10,7 +14,11 @@
   <a href="https://github.com/MichengAI/deepseek-harness-desktop/issues">Report an issue</a>
 </p>
 
-> **Preview release.** DeepSeek Harness Desktop is a community-maintained distribution project. It is not an official DeepSeek AI product.
+<p align="center">
+  <img src="assets/screenshots/workspace-session.png" alt="Workspace and coding review session" width="960">
+</p>
+
+> DeepSeek Harness Desktop is a community-maintained distribution project. It is not an official DeepSeek AI product.
 
 DeepSeek Harness Desktop packages the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) web experience as a native desktop application. It bundles the required Node.js runtime, starts DSH locally, and opens the interface in a dedicated desktop window.
 
@@ -18,19 +26,16 @@ DeepSeek Harness Desktop packages the [DeepSeek Harness](https://github.com/deep
 
 Download supported packages from [GitHub Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases).
 
-| Platform | Package | Availability |
+| Platform | Package | Release status |
 | --- | --- | --- |
-| Windows x64 | **.exe** installer / **.zip** archive | Available now |
-| macOS Apple Silicon | **.dmg** installer / **.zip** archive | Unsigned preview package |
-| macOS Intel | **.dmg** installer / **.zip** archive | Unsigned preview package |
+| Windows x64 | **.exe** installer | Available · [Download](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-win-x64.exe) |
+| Windows x64 | **.zip** archive | Available · [Download](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-win-x64.zip) |
+| macOS Apple Silicon | **.dmg** installer | Available · [Download](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-mac-arm64.dmg) |
+| macOS Intel | **.dmg** installer | Available · [Download](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-mac-x64.dmg) |
 
-Only download installers from this repository's Releases page. Windows preview builds may display a SmartScreen warning. macOS packages are **unsigned and not notarized preview builds**: macOS will show a security warning and may require manual approval in System Settings before opening. They are provided for testing only; do not use them in production or with sensitive data.
+All current and historical packages are available from [GitHub Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases).
 
 ## Screenshots
-
-<p align="center">
-  <img src="assets/screenshots/workspace-session.png" alt="Workspace and coding review session" width="960">
-</p>
 
 <p align="center">
   <em>Workspace, session timeline, tool activity, and model controls.</em>
@@ -85,8 +90,7 @@ Your configured model providers and DSH tools may make their own network request
 | Situation | What to do |
 | --- | --- |
 | Installation appears to pause | Wait several minutes. The installer is extracting the bundled runtime. |
-| Windows SmartScreen appears | Verify the download came from this repository's Releases page; preview builds are not yet code-signed. |
-| macOS says the app cannot be opened | This is expected for an unsigned preview package. Verify it came from this repository, then manually approve it in macOS System Settings. Do not bypass the warning for packages from other sources. |
+| macOS says the app cannot be opened | Move the application to Applications, then open it again and follow the system prompt. |
 | Startup fails | Reopen the app and check the diagnostic path shown in the error window. |
 | Existing DSH data is not visible | Confirm you are using the same Windows account and inspect %USERPROFILE%\.dsh. |
 
@@ -103,7 +107,7 @@ $env:DSH_RUNTIME_ROOT = 'D:\Repository\deepseek-harness'
 pnpm run dist
 ~~~
 
-Build output is written locally to **release\** and is not committed. Pushing a **vX.Y.Z** tag builds Windows x64 and both macOS architectures. Without Apple credentials, macOS packages are published as unsigned, non-notarized preview builds; configuring them enables signing and notarization.
+Build output is written locally to **release\** and is not committed. Pushing a **vX.Y.Z** tag builds Windows x64 and both macOS architectures.
 
 ## Project documentation
 

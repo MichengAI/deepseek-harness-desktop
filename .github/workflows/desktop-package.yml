@@ -168,6 +168,6 @@ jobs:
         run: |
           [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
           $OutputEncoding = [System.Text.Encoding]::UTF8
-          $files = Get-ChildItem -LiteralPath 'release' -File | Where-Object { $_.Extension -in '.exe', '.zip', '.dmg', '.blockmap' }
+          $files = Get-ChildItem -LiteralPath 'release' -File | Where-Object { $_.Extension -in '.exe', '.zip', '.dmg' }
           if ($files.Count -eq 0) { throw '未找到可发布的安装包。' }
           gh release create $env:GITHUB_REF_NAME @($files.FullName) --generate-notes --title $env:GITHUB_REF_NAME

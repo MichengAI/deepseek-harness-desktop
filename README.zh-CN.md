@@ -1,4 +1,8 @@
-# DeepSeek Harness Desktop
+<p align="center">
+  <img src="assets/icon.png" alt="DeepSeek Harness Desktop" width="128">
+</p>
+
+<h1 align="center">DeepSeek Harness Desktop</h1>
 
 <p align="center">
   <strong>支持 Windows 与 macOS 的 DeepSeek Harness 原生桌面启动器。</strong>
@@ -10,7 +14,11 @@
   <a href="https://github.com/MichengAI/deepseek-harness-desktop/issues">反馈问题</a>
 </p>
 
-> **预览版本。** DeepSeek Harness Desktop 是社区维护的分发项目，并非 DeepSeek AI 官方产品。
+<p align="center">
+  <img src="assets/screenshots/workspace-session.png" alt="工作区与代码审查会话界面" width="960">
+</p>
+
+> DeepSeek Harness Desktop 是社区维护的分发项目，并非 DeepSeek AI 官方产品。
 
 DeepSeek Harness Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的 Web 使用体验封装为原生桌面应用。它随安装包提供所需 Node.js 运行时，在本机启动 DSH，并在独立桌面窗口中打开界面。
 
@@ -20,17 +28,14 @@ DeepSeek Harness Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/d
 
 | 平台 | 文件 | 发布状态 |
 | --- | --- | --- |
-| Windows x64 | **.exe** 安装器 / **.zip** 压缩包 | 当前可用 |
-| macOS Apple Silicon | **.dmg** 安装器 / **.zip** 压缩包 | 未签名测试包 |
-| macOS Intel | **.dmg** 安装器 / **.zip** 压缩包 | 未签名测试包 |
+| Windows x64 | **.exe** 安装器 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-win-x64.exe) |
+| Windows x64 | **.zip** 压缩包 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-win-x64.zip) |
+| macOS Apple Silicon | **.dmg** 安装器 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-mac-arm64.dmg) |
+| macOS Intel | **.dmg** 安装器 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-mac-x64.dmg) |
 
-请只从本仓库的 Releases 页面下载安装程序。Windows 预览版可能触发 SmartScreen。macOS 安装包为**未签名、未公证的测试版**：系统会显示安全提示，可能需要在“系统设置”中手动允许打开。它们仅用于测试，请勿用于生产环境或处理敏感数据。
+全部当前与历史安装包请从 [GitHub Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases) 获取。
 
 ## 界面预览
-
-<p align="center">
-  <img src="assets/screenshots/workspace-session.png" alt="工作区与代码审查会话界面" width="960">
-</p>
 
 <p align="center">
   <em>工作区、会话时间线、工具活动与模型控制。</em>
@@ -85,8 +90,7 @@ DeepSeek Harness Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/d
 | 情况 | 处理方式 |
 | --- | --- |
 | 安装进度似乎停住 | 请等待数分钟，安装器正在解压随包运行时。 |
-| 出现 Windows SmartScreen | 确认安装包来自本仓库 Releases 页面；预览版暂未代码签名。 |
-| macOS 提示无法打开应用 | 这是未签名测试包的预期提示。确认安装包来自本仓库后，可在 macOS“系统设置”中手动允许打开；请勿绕过其他来源安装包的安全提示。 |
+| macOS 提示无法打开应用 | 将应用移动到“应用程序”目录后重新打开，并按系统提示继续。 |
 | 启动失败 | 重新打开应用，并查看错误窗口显示的诊断日志路径。 |
 | 看不到已有 DSH 数据 | 确认使用同一 Windows 账号，并检查 %USERPROFILE%\.dsh。 |
 
@@ -103,7 +107,7 @@ $env:DSH_RUNTIME_ROOT = 'D:\Repository\deepseek-harness'
 pnpm run dist
 ~~~
 
-构建制品仅写入本地 **release\**，不会提交。推送 **vX.Y.Z** 标签后，工作流会构建 Windows x64 与两种 macOS 架构。未配置 Apple 凭据时，macOS 制品会以未签名、未公证测试版发布；配置凭据后会自动签名和公证。
+构建制品仅写入本地 **release\**，不会提交。推送 **vX.Y.Z** 标签后，工作流会构建 Windows x64 与两种 macOS 架构。
 
 ## 项目文档
 
