@@ -1,0 +1,68 @@
+{
+  "name": "deepseek-harness-desktop",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness 的 Windows 桌面启动器",
+  "author": "MichengAI",
+  "private": true,
+  "type": "module",
+  "main": "dist/src/main.js",
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "test": "pnpm run build && node --test dist/test/readiness.test.js",
+    "start": "pnpm run build && electron .",
+    "prepare-runtime": "pnpm run build && node dist/scripts/prepare-runtime.js",
+    "pack": "pnpm run prepare-runtime && electron-builder --dir",
+    "dist": "pnpm run prepare-runtime && electron-builder"
+  },
+  "devDependencies": {
+    "@types/node": "26.2.0",
+    "electron": "43.4.0",
+    "electron-builder": "26.15.3",
+    "typescript": "5.9.3"
+  },
+  "build": {
+    "appId": "ai.micheng.deepseekHarnessDesktop",
+    "productName": "DeepSeek Harness Desktop",
+    "asar": true,
+    "files": [
+      "dist/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "runtime",
+        "to": "dsh",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "runtime\\node_modules",
+        "to": "dsh\\node_modules",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "runtime-node",
+        "to": "node",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "perMachine": false,
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

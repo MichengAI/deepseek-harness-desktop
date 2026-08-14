@@ -1,0 +1,68 @@
+name: Windows 打包
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - name: 检出桌面启动器
+        uses: actions/checkout@v4
+
+      - name: 配置 Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+
+      - name: 配置 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: 检出固定 DSH 源码
+        uses: actions/checkout@v4
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: 47f943859bef60e4160492346772ded9b24f765a
+          path: upstream
+
+      - name: 构建 DSH
+        shell: pwsh
+        working-directory: upstream
+        run: |
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+      - name: 测试并打包桌面端
+        shell: pwsh
+        run: |
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          pnpm install --frozen-lockfile
+          pnpm test
+          $env:DSH_RUNTIME_ROOT = Join-Path $env:GITHUB_WORKSPACE 'upstream'
+          pnpm run dist
+
+      - name: 发布 GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          $files = Get-ChildItem -LiteralPath 'dist' -File | Where-Object { $_.Extension -in '.exe', '.zip', '.blockmap' }
+          if ($files.Count -eq 0) { throw '未找到可发布的安装包。' }
+          gh release create $env:GITHUB_REF_NAME @($files.FullName) --generate-notes --title $env:GITHUB_REF_NAME
