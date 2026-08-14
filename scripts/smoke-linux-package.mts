@@ -1,6 +1,7 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
-import { existsSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
@@ -49,7 +50,15 @@ async function waitForHealthyServer(applicationProcessId: number): Promise<strin
     }
     await delay(500)
   }
-  throw new Error('打包应用在 60 秒内未启动本机 HTTP 服务。')
+  const startupError = readStartupError()
+  throw new Error(`打包应用在 60 秒内未启动本机 HTTP 服务。${startupError === undefined ? '' : ` 启动诊断：${startupError}`}`)
+}
+
+function readStartupError(): string | undefined {
+  const appDataPath = process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config')
+  const logPath = join(appDataPath, 'deepseek-harness-desktop', 'startup-error.log')
+  if (!existsSync(logPath)) return undefined
+  return readFileSync(logPath, 'utf8').trim()
 }
 
 async function findBootstrapProcessId(applicationProcessId: number): Promise<number | undefined> {
