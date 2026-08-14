@@ -1,7 +1,7 @@
 # DeepSeek Harness Desktop
 
 <p align="center">
-  <strong>A native Windows desktop launcher for DeepSeek Harness.</strong>
+  <strong>A native desktop launcher for DeepSeek Harness on Windows and macOS.</strong>
 </p>
 
 <p align="center">
@@ -10,20 +10,21 @@
   <a href="https://github.com/MichengAI/deepseek-harness-desktop/issues">Report an issue</a>
 </p>
 
-> **Preview release.** DeepSeek Harness Desktop is a community-maintained Windows distribution project. It is not an official DeepSeek AI product.
+> **Preview release.** DeepSeek Harness Desktop is a community-maintained distribution project. It is not an official DeepSeek AI product.
 
-DeepSeek Harness Desktop packages the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) web experience as a native Windows application. It bundles the required Node.js runtime, starts DSH locally, and opens the interface in a dedicated desktop window.
+DeepSeek Harness Desktop packages the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) web experience as a native desktop application. It bundles the required Node.js runtime, starts DSH locally, and opens the interface in a dedicated desktop window.
 
 ## Download
 
-Download the latest Windows x64 installer from [GitHub Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases).
+Download supported packages from [GitHub Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases).
 
-| Package | Recommended for |
-| --- | --- |
-| **DeepSeek Harness Desktop-*-x64.exe** | Most Windows users |
-| **DeepSeek Harness Desktop-*-x64.zip** | Portable or manual deployment |
+| Platform | Package | Availability |
+| --- | --- | --- |
+| Windows x64 | **.exe** installer / **.zip** archive | Available now |
+| macOS Apple Silicon | **.dmg** installer / **.zip** archive | Published after Apple signing and notarization |
+| macOS Intel | **.dmg** installer / **.zip** archive | Published after Apple signing and notarization |
 
-Only download installers from this repository's Releases page. Unsigned preview builds may display a Windows SmartScreen warning.
+Only download installers from this repository's Releases page. Windows preview builds may display a SmartScreen warning; macOS release builds will be published only after signing and notarization.
 
 ## Screenshots
 
@@ -45,7 +46,7 @@ Only download installers from this repository's Releases page. Unsigned preview 
 
 ## What it provides
 
-- **Windows-native startup** — installs and launches DeepSeek Harness without a separate Node.js installation.
+- **Native startup** — installs and launches DeepSeek Harness on Windows and macOS without a separate Node.js installation.
 - **Local DSH runtime** — starts DSH on a randomly assigned loopback port and renders it in an Electron window.
 - **Focused desktop workflow** — uses the existing DSH workspace, session, model, plugin, and Agent preset capabilities.
 - **Desktop behavior** — single-instance protection, system-tray controls, and safe handling of external links.
@@ -55,15 +56,15 @@ Only download installers from this repository's Releases page. Unsigned preview 
 
 | Item | Requirement |
 | --- | --- |
-| Operating system | Windows 10 or Windows 11 |
-| Architecture | x64 |
+| Operating system | Windows 10/11 or macOS |
+| Architecture | Windows x64, macOS Apple Silicon (arm64), or macOS Intel (x64) |
 | Network | Required only for the model providers and tools you configure |
 | Node.js | Not required for end users; bundled with the application |
 
 ## Install and get started
 
-1. Download the latest **.exe** installer from [Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases).
-2. Run the installer and launch **DeepSeek Harness Desktop**.
+1. Download the package for your operating system from [Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases).
+2. Run the Windows **.exe** installer or open the macOS **.dmg**, then launch **DeepSeek Harness Desktop**.
 3. Wait for the local DSH service to start, then create or open a workspace and session.
 4. Configure models, plugins, permissions, and Agent presets in DSH settings as needed.
 
@@ -85,6 +86,7 @@ Your configured model providers and DSH tools may make their own network request
 | --- | --- |
 | Installation appears to pause | Wait several minutes. The installer is extracting the bundled runtime. |
 | Windows SmartScreen appears | Verify the download came from this repository's Releases page; preview builds are not yet code-signed. |
+| macOS says the app cannot be opened | Use only a signed, notarized package from Releases. Unsigned preview artifacts are not intended for end users. |
 | Startup fails | Reopen the app and check the diagnostic path shown in the error window. |
 | Existing DSH data is not visible | Confirm you are using the same Windows account and inspect %USERPROFILE%\.dsh. |
 
@@ -101,7 +103,11 @@ $env:DSH_RUNTIME_ROOT = 'D:\Repository\deepseek-harness'
 pnpm run dist
 ~~~
 
-Build output is written locally to **release\** and is not committed. Pushing a **vX.Y.Z** tag runs the Windows packaging workflow and creates a GitHub Release.
+Build output is written locally to **release\** and is not committed. Pushing a **vX.Y.Z** tag builds Windows x64 and both macOS architectures; macOS packages are released only after Apple signing and notarization succeed.
+
+## Project documentation
+
+Project status, active work, architecture constraints, and iteration records are available from the [documentation entry point](docs/00-交接入口/00-阅读导航.md).
 
 ## Support and contribution
 

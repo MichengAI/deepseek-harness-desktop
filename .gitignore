@@ -5,7 +5,6 @@ runtime/
 runtime-node/
 node_modules/
 
-# 交接文档与开发过程产物仅保留在本地。
-docs/
+# 开发过程产物仅保留在本地。
 coverage/
 *.log
