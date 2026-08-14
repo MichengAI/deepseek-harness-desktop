@@ -3,6 +3,7 @@
   "version": "0.1.3",
   "description": "DeepSeek Harness 原生桌面启动器",
   "author": "MichengAI",
+  "desktopName": "deepseek-harness-desktop",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -99,6 +100,8 @@
     "linux": {
       "category": "Development",
       "executableName": "deepseek-harness-desktop",
+      "maintainer": "MichengAI <coolyujiyu@qq.com>",
+      "syncDesktopName": true,
       "target": [
         "AppImage",
         "deb"
