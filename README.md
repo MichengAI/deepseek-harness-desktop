@@ -5,7 +5,7 @@
 <h1 align="center">DeepSeek Harness Desktop</h1>
 
 <p align="center">
-  <strong>A native desktop launcher for DeepSeek Harness on Windows and macOS.</strong>
+  <strong>A native desktop launcher for DeepSeek Harness on Windows, macOS, and Linux.</strong>
 </p>
 
 <p align="center">
@@ -23,6 +23,7 @@
   <a href="https://github.com/MichengAI/deepseek-harness-desktop/actions/workflows/desktop-package.yml"><img src="https://github.com/MichengAI/deepseek-harness-desktop/actions/workflows/desktop-package.yml/badge.svg?branch=main" alt="Desktop package"></a>
   <img src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-000000?logo=apple&logoColor=white" alt="macOS Apple Silicon and Intel">
   <img src="https://img.shields.io/badge/Windows-x64-0078D4?logo=windows&logoColor=white" alt="Windows x64">
+  <img src="https://img.shields.io/badge/Linux-x64-FCC624?logo=linux&logoColor=black" alt="Linux x64">
 </p>
 
 <p align="center">
@@ -45,6 +46,7 @@ Download supported packages from [GitHub Releases](https://github.com/MichengAI/
 | macOS Intel | **.dmg** installer | Available · [Download](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.3/DeepSeek.Harness.Desktop-0.1.3-mac-x64.dmg) |
 
 All current and historical packages are available from [GitHub Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases).
+Linux x64 **.AppImage** and Debian/Ubuntu x64 **.deb** packages will be available with the next tagged release.
 
 ## Screenshots
 
@@ -62,7 +64,7 @@ All current and historical packages are available from [GitHub Releases](https:/
 
 ## What it provides
 
-- **Native startup** — installs and launches DeepSeek Harness on Windows and macOS without a separate Node.js installation.
+- **Native startup** — installs and launches DeepSeek Harness on Windows, macOS, and Linux without a separate Node.js installation.
 - **Local DSH runtime** — starts DSH on a randomly assigned loopback port and renders it in an Electron window.
 - **Focused desktop workflow** — uses the existing DSH workspace, session, model, plugin, and Agent preset capabilities.
 - **Desktop behavior** — single-instance protection, system-tray controls, and safe handling of external links.
@@ -72,15 +74,15 @@ All current and historical packages are available from [GitHub Releases](https:/
 
 | Item | Requirement |
 | --- | --- |
-| Operating system | Windows 10/11 or macOS |
-| Architecture | Windows x64, macOS Apple Silicon (arm64), or macOS Intel (x64) |
+| Operating system | Windows 10/11, macOS, or Linux |
+| Architecture | Windows x64, macOS Apple Silicon (arm64), macOS Intel (x64), or Linux x64 |
 | Network | Required only for the model providers and tools you configure |
 | Node.js | Not required for end users; bundled with the application |
 
 ## Install and get started
 
 1. Download the package for your operating system from [Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases).
-2. Run the Windows **.exe** installer or open the macOS **.dmg**, then launch **DeepSeek Harness Desktop**.
+2. Run the Windows **.exe** installer, open the macOS **.dmg**, run the Linux **.AppImage**, or install the Debian/Ubuntu **.deb** package; then launch **DeepSeek Harness Desktop**.
 3. Wait for the local DSH service to start, then create or open a workspace and session.
 4. Configure models, plugins, permissions, and Agent presets in DSH settings as needed.
 
@@ -91,7 +93,7 @@ The installer bundles a complete runtime. Installation and first startup can tak
 - The launcher accepts and loads only validated local HTTP addresses on **127.0.0.1**.
 - External HTTP(S) links open in the system browser; file, JavaScript, and data URLs are blocked.
 - Electron runs with Node.js integration disabled, context isolation enabled, and sandboxing enabled.
-- DSH configuration, sessions, and credentials remain in **%USERPROFILE%\.dsh**. Uninstalling the desktop launcher does not remove that directory.
+- DSH configuration, sessions, and credentials remain in **~/.dsh** (on Windows: **%USERPROFILE%\.dsh**). Uninstalling the desktop launcher does not remove that directory.
 - The launcher does not expose Electron IPC APIs to the DSH page.
 
 Your configured model providers and DSH tools may make their own network requests. Review their respective settings and policies before use.
@@ -103,7 +105,7 @@ Your configured model providers and DSH tools may make their own network request
 | Installation appears to pause | Wait several minutes. The installer is extracting the bundled runtime. |
 | macOS says the app cannot be opened | Move the application to Applications, then open it again and follow the system prompt. |
 | Startup fails | Reopen the app and check the diagnostic path shown in the error window. |
-| Existing DSH data is not visible | Confirm you are using the same Windows account and inspect %USERPROFILE%\.dsh. |
+| Existing DSH data is not visible | Confirm you are using the same account and inspect ~/.dsh (on Windows: %USERPROFILE%\.dsh). |
 
 ## Development
 
@@ -118,7 +120,7 @@ $env:DSH_RUNTIME_ROOT = 'D:\Repository\deepseek-harness'
 pnpm run dist
 ~~~
 
-Build output is written locally to **release\** and is not committed. Pushing a **vX.Y.Z** tag builds Windows x64 and both macOS architectures.
+Build output is written locally to **release\** and is not committed. Pushing a **vX.Y.Z** tag builds Windows x64, macOS Apple Silicon/Intel, and Linux x64 AppImage/DEB packages.
 
 ## Project documentation
 

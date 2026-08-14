@@ -32,6 +32,10 @@ jobs:
             platform: macos-x64
             runner: macos-15-intel
             buildArguments: --mac --x64
+          - name: Linux x64
+            platform: linux-x64
+            runner: ubuntu-24.04
+            buildArguments: --linux --x64
     steps:
       - name: 检出桌面启动器
         uses: actions/checkout@v4
@@ -77,6 +81,18 @@ jobs:
           path: ci-logs/dsh-build.log
           if-no-files-found: error
           retention-days: 7
+
+      - name: 构建 Linux 原生 Landlock 启动器
+        if: matrix.platform == 'linux-x64'
+        shell: pwsh
+        working-directory: upstream/native/landlock-run
+        run: |
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          sudo apt-get update -q
+          sudo apt-get install -yq musl-tools xvfb lsof
+          pnpm run build:ts
+          pnpm run build:native
 
       - name: 导入 macOS 签名证书
         if: startsWith(matrix.platform, 'macos-') && startsWith(github.ref, 'refs/tags/v')
@@ -137,6 +153,17 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($applicationPath)) { throw '未找到 macOS 应用包。' }
           pnpm run smoke:mac -- --application-path $applicationPath
 
+      - name: 冒烟检查 Linux 打包应用
+        if: matrix.platform == 'linux-x64'
+        shell: pwsh
+        run: |
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          $applicationPath = Join-Path $env:GITHUB_WORKSPACE 'release/linux-unpacked/deepseek-harness-desktop'
+          if (-not (Test-Path -LiteralPath $applicationPath -PathType Leaf)) { throw '未找到 Linux 应用可执行文件。' }
+          & xvfb-run -a pnpm run smoke:linux -- --application-path $applicationPath
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: 上传平台制品
         uses: actions/upload-artifact@v4
         with:
@@ -168,6 +195,6 @@ jobs:
         run: |
           [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
           $OutputEncoding = [System.Text.Encoding]::UTF8
-          $files = Get-ChildItem -LiteralPath 'release' -File | Where-Object { $_.Extension -in '.exe', '.zip', '.dmg' }
+          $files = Get-ChildItem -LiteralPath 'release' -File | Where-Object { $_.Extension -in '.exe', '.zip', '.dmg', '.AppImage', '.deb' }
           if ($files.Count -eq 0) { throw '未找到可发布的安装包。' }
           gh release create $env:GITHUB_REF_NAME @($files.FullName) --generate-notes --title $env:GITHUB_REF_NAME
