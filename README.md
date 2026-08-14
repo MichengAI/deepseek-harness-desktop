@@ -21,10 +21,10 @@ Download supported packages from [GitHub Releases](https://github.com/MichengAI/
 | Platform | Package | Availability |
 | --- | --- | --- |
 | Windows x64 | **.exe** installer / **.zip** archive | Available now |
-| macOS Apple Silicon | **.dmg** installer / **.zip** archive | Published after Apple signing and notarization |
-| macOS Intel | **.dmg** installer / **.zip** archive | Published after Apple signing and notarization |
+| macOS Apple Silicon | **.dmg** installer / **.zip** archive | Unsigned preview package |
+| macOS Intel | **.dmg** installer / **.zip** archive | Unsigned preview package |
 
-Only download installers from this repository's Releases page. Windows preview builds may display a SmartScreen warning; macOS release builds will be published only after signing and notarization.
+Only download installers from this repository's Releases page. Windows preview builds may display a SmartScreen warning. macOS packages are **unsigned and not notarized preview builds**: macOS will show a security warning and may require manual approval in System Settings before opening. They are provided for testing only; do not use them in production or with sensitive data.
 
 ## Screenshots
 
@@ -86,7 +86,7 @@ Your configured model providers and DSH tools may make their own network request
 | --- | --- |
 | Installation appears to pause | Wait several minutes. The installer is extracting the bundled runtime. |
 | Windows SmartScreen appears | Verify the download came from this repository's Releases page; preview builds are not yet code-signed. |
-| macOS says the app cannot be opened | Use only a signed, notarized package from Releases. Unsigned preview artifacts are not intended for end users. |
+| macOS says the app cannot be opened | This is expected for an unsigned preview package. Verify it came from this repository, then manually approve it in macOS System Settings. Do not bypass the warning for packages from other sources. |
 | Startup fails | Reopen the app and check the diagnostic path shown in the error window. |
 | Existing DSH data is not visible | Confirm you are using the same Windows account and inspect %USERPROFILE%\.dsh. |
 
@@ -103,7 +103,7 @@ $env:DSH_RUNTIME_ROOT = 'D:\Repository\deepseek-harness'
 pnpm run dist
 ~~~
 
-Build output is written locally to **release\** and is not committed. Pushing a **vX.Y.Z** tag builds Windows x64 and both macOS architectures; macOS packages are released only after Apple signing and notarization succeed.
+Build output is written locally to **release\** and is not committed. Pushing a **vX.Y.Z** tag builds Windows x64 and both macOS architectures. Without Apple credentials, macOS packages are published as unsigned, non-notarized preview builds; configuring them enables signing and notarization.
 
 ## Project documentation
 

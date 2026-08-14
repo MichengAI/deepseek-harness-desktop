@@ -88,8 +88,14 @@ jobs:
         run: |
           [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
           $OutputEncoding = [System.Text.Encoding]::UTF8
-          if ([string]::IsNullOrWhiteSpace($env:MACOS_CERTIFICATE) -or [string]::IsNullOrWhiteSpace($env:MACOS_CERTIFICATE_PASSWORD) -or [string]::IsNullOrWhiteSpace($env:MACOS_KEYCHAIN_PASSWORD)) {
-            throw 'macOS 标签发布缺少签名证书或钥匙串凭据。'
+          $certificateValues = @($env:MACOS_CERTIFICATE, $env:MACOS_CERTIFICATE_PASSWORD, $env:MACOS_KEYCHAIN_PASSWORD)
+          $configuredCount = @($certificateValues | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count
+          if ($configuredCount -eq 0) {
+            Write-Host '未配置 macOS 签名证书，继续生成未签名测试版。'
+            exit 0
+          }
+          if ($configuredCount -ne $certificateValues.Count) {
+            throw 'macOS 签名凭据必须同时完整配置或全部留空。'
           }
           $certificatePath = Join-Path $env:RUNNER_TEMP 'macos-signing-certificate.p12'
           [System.IO.File]::WriteAllBytes($certificatePath, [System.Convert]::FromBase64String($env:MACOS_CERTIFICATE))
@@ -108,11 +114,6 @@ jobs:
         run: |
           [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
           $OutputEncoding = [System.Text.Encoding]::UTF8
-          if ($env:GITHUB_REF -like 'refs/tags/v*' -and '${{ matrix.platform }}' -like 'macos-*') {
-            if ([string]::IsNullOrWhiteSpace($env:APPLE_ID) -or [string]::IsNullOrWhiteSpace($env:APPLE_APP_SPECIFIC_PASSWORD) -or [string]::IsNullOrWhiteSpace($env:APPLE_TEAM_ID)) {
-              throw 'macOS 标签发布缺少 Apple 公证凭据。'
-            }
-          }
           pnpm install --frozen-lockfile
           pnpm test
           $env:DSH_RUNTIME_ROOT = Join-Path $env:GITHUB_WORKSPACE 'upstream'

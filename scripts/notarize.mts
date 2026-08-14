@@ -14,13 +14,22 @@ export function isNotarizationRequired(githubRef = process.env.GITHUB_REF): bool
   return githubRef?.startsWith('refs/tags/v') ?? false
 }
 
+export function isNotarizationConfigured(
+  appleId = process.env.APPLE_ID,
+  appleIdPassword = process.env.APPLE_APP_SPECIFIC_PASSWORD,
+  teamId = process.env.APPLE_TEAM_ID,
+): boolean {
+  return Boolean(appleId && appleIdPassword && teamId)
+}
+
 export default async function notarizeApplication(context: AfterSignContext): Promise<void> {
   if (process.platform !== 'darwin' || !isNotarizationRequired()) return
   const appleId = process.env.APPLE_ID
   const appleIdPassword = process.env.APPLE_APP_SPECIFIC_PASSWORD
   const teamId = process.env.APPLE_TEAM_ID
-  if (!appleId || !appleIdPassword || !teamId) {
-    throw new Error('macOS 标签发布缺少 Apple 公证凭据。')
+  if (!isNotarizationConfigured(appleId, appleIdPassword, teamId) || !appleId || !appleIdPassword || !teamId) {
+    console.warn('未配置 Apple 公证凭据，继续生成未公证的 macOS 测试版。')
+    return
   }
 
   await notarize({
