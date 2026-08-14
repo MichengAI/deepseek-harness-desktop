@@ -12,7 +12,8 @@ async function main(): Promise<void> {
   const applicationPath = resolve(readArgument('--application-path'))
   if (!existsSync(applicationPath)) throw new Error(`未找到 Linux 应用可执行文件：${applicationPath}`)
 
-  const application = spawn(applicationPath, [], { stdio: ['ignore', 'pipe', 'pipe'] })
+  // GitHub Runner 无法为未安装目录中的 chrome-sandbox 设置 root/4755；仅冒烟检查禁用 Chromium 沙箱。
+  const application = spawn(applicationPath, ['--no-sandbox'], { stdio: ['ignore', 'pipe', 'pipe'] })
   if (!application.pid) throw new Error('未获取到应用进程 ID。')
   let applicationOutput = ''
   const captureOutput = (chunk: Buffer): void => {
