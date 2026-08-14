@@ -59,8 +59,23 @@ jobs:
         run: |
           [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
           $OutputEncoding = [System.Text.Encoding]::UTF8
-          pnpm install --frozen-lockfile
-          pnpm run build
+          $logPath = Join-Path $env:GITHUB_WORKSPACE 'ci-logs\dsh-build.log'
+          New-Item -ItemType Directory -Force -Path (Split-Path -Parent $logPath) | Out-Null
+          & pnpm install --frozen-lockfile 2>&1 | Tee-Object -FilePath $logPath
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -ne 0) { exit $exitCode }
+          & pnpm run build 2>&1 | Tee-Object -FilePath $logPath -Append
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -ne 0) { exit $exitCode }
+
+      - name: 上传 DSH 构建日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-build-log-${{ matrix.platform }}
+          path: ci-logs\dsh-build.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: 导入 macOS 签名证书
         if: startsWith(matrix.platform, 'macos-') && startsWith(github.ref, 'refs/tags/v')
