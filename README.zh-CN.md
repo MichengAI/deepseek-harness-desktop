@@ -49,7 +49,7 @@ DeepSeek Harness Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/d
 ## 界面预览
 
 <p align="center">
-  <em>工作区、会话时间线、工具活动与模型控制。</em>
+  <em>新建工作区会话，并选择模型与权限模式。</em>
 </p>
 
 <p align="center">
@@ -57,7 +57,7 @@ DeepSeek Harness Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/d
 </p>
 
 <p align="center">
-  <em>语言、主题、默认权限模式与 Agent 预设设置。</em>
+  <em>选择内置 Agent 预设，或创建自定义预设。</em>
 </p>
 
 ## 核心能力

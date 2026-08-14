@@ -49,7 +49,7 @@ All current and historical packages are available from [GitHub Releases](https:/
 ## Screenshots
 
 <p align="center">
-  <em>Workspace, session timeline, tool activity, and model controls.</em>
+  <em>Start a new workspace conversation with model and permission controls.</em>
 </p>
 
 <p align="center">
@@ -57,7 +57,7 @@ All current and historical packages are available from [GitHub Releases](https:/
 </p>
 
 <p align="center">
-  <em>Language, theme, default permission mode, and Agent preset settings.</em>
+  <em>Choose a built-in Agent preset or create a custom preset.</em>
 </p>
 
 ## What it provides
