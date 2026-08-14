@@ -10,16 +10,24 @@ const sourceRoot = resolve(process.env.DSH_RUNTIME_ROOT ?? join(projectRoot, '..
 const runtimeRoot = join(projectRoot, 'runtime')
 const nodeRoot = join(projectRoot, 'runtime-node')
 
+export function resolveBundledNodeSha256(checksums: unknown, platform = process.platform, architecture = process.arch): string {
+  if (typeof checksums !== 'object' || checksums === null || Array.isArray(checksums)) {
+    throw new Error('package.json 缺少随包 Node SHA256 配置。')
+  }
+  const target = `${platform}-${architecture}`
+  const checksum = (checksums as Record<string, unknown>)[target]
+  if (typeof checksum !== 'string') throw new Error(`缺少随包 Node SHA256：${target}。`)
+  return checksum
+}
+
 async function main(): Promise<void> {
   const projectManifest = JSON.parse(await readFile(join(projectRoot, 'package.json'), 'utf8')) as {
     config?: { bundledNodeSha256?: unknown, bundledNodeVersion?: unknown }
   }
   const expectedNodeVersion = projectManifest.config?.bundledNodeVersion
-  const expectedNodeSha256 = projectManifest.config?.bundledNodeSha256
+  const expectedNodeSha256 = resolveBundledNodeSha256(projectManifest.config?.bundledNodeSha256)
 
-  if (typeof expectedNodeVersion !== 'string' || typeof expectedNodeSha256 !== 'string') {
-    throw new Error('package.json 缺少随包 Node 的版本或 SHA256 配置。')
-  }
+  if (typeof expectedNodeVersion !== 'string') throw new Error('package.json 缺少随包 Node 版本配置。')
   if (process.version !== expectedNodeVersion) {
     throw new Error('随包 Node 版本不匹配：需要 ' + expectedNodeVersion + '，实际 ' + process.version + '。')
   }

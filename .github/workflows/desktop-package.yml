@@ -1,0 +1,153 @@
+name: 桌面端打包
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64
+            platform: windows-x64
+            runner: windows-latest
+            buildArguments: --win --x64
+          - name: macOS Apple Silicon
+            platform: macos-arm64
+            runner: macos-14
+            buildArguments: --mac --arm64
+          - name: macOS Intel
+            platform: macos-x64
+            runner: macos-15-intel
+            buildArguments: --mac --x64
+    steps:
+      - name: 检出桌面启动器
+        uses: actions/checkout@v4
+
+      - name: 配置 Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+
+      - name: 配置 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.20.0
+
+      - name: 检出固定 DSH 源码
+        uses: actions/checkout@v4
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: 47f943859bef60e4160492346772ded9b24f765a
+          path: upstream
+
+      - name: 构建 DSH
+        shell: pwsh
+        working-directory: upstream
+        run: |
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+      - name: 导入 macOS 签名证书
+        if: startsWith(matrix.platform, 'macos-') && startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+        run: |
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          if ([string]::IsNullOrWhiteSpace($env:MACOS_CERTIFICATE) -or [string]::IsNullOrWhiteSpace($env:MACOS_CERTIFICATE_PASSWORD) -or [string]::IsNullOrWhiteSpace($env:MACOS_KEYCHAIN_PASSWORD)) {
+            throw 'macOS 标签发布缺少签名证书或钥匙串凭据。'
+          }
+          $certificatePath = Join-Path $env:RUNNER_TEMP 'macos-signing-certificate.p12'
+          [System.IO.File]::WriteAllBytes($certificatePath, [System.Convert]::FromBase64String($env:MACOS_CERTIFICATE))
+          security create-keychain -p $env:MACOS_KEYCHAIN_PASSWORD build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p $env:MACOS_KEYCHAIN_PASSWORD build.keychain
+          security import $certificatePath -k build.keychain -P $env:MACOS_CERTIFICATE_PASSWORD -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k $env:MACOS_KEYCHAIN_PASSWORD build.keychain
+
+      - name: 测试并打包桌面端
+        shell: pwsh
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          if ($env:GITHUB_REF -like 'refs/tags/v*' -and '${{ matrix.platform }}' -like 'macos-*') {
+            if ([string]::IsNullOrWhiteSpace($env:APPLE_ID) -or [string]::IsNullOrWhiteSpace($env:APPLE_APP_SPECIFIC_PASSWORD) -or [string]::IsNullOrWhiteSpace($env:APPLE_TEAM_ID)) {
+              throw 'macOS 标签发布缺少 Apple 公证凭据。'
+            }
+          }
+          pnpm install --frozen-lockfile
+          pnpm test
+          $env:DSH_RUNTIME_ROOT = Join-Path $env:GITHUB_WORKSPACE 'upstream'
+          pnpm run dist -- ${{ matrix.buildArguments }}
+
+      - name: 冒烟检查 Windows 打包应用
+        if: matrix.platform == 'windows-x64'
+        shell: pwsh
+        run: |
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          .\scripts\smoke-package.ps1 -ApplicationPath 'release\win-unpacked\DeepSeek Harness Desktop.exe'
+
+      - name: 冒烟检查 macOS 打包应用
+        if: startsWith(matrix.platform, 'macos-')
+        shell: pwsh
+        run: |
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          $applicationPath = Get-ChildItem -LiteralPath 'release' -Recurse -Directory -Filter '*.app' | Select-Object -First 1 -ExpandProperty FullName
+          if ([string]::IsNullOrWhiteSpace($applicationPath)) { throw '未找到 macOS 应用包。' }
+          pnpm run smoke:mac -- --application-path $applicationPath
+
+      - name: 上传平台制品
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.platform }}
+          path: release/**
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: 发布 GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: windows-latest
+    steps:
+      - name: 下载各平台制品
+        uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          path: release
+          merge-multiple: true
+
+      - name: 创建 GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $OutputEncoding = [System.Text.Encoding]::UTF8
+          $files = Get-ChildItem -LiteralPath 'release' -Recurse -File | Where-Object { $_.Extension -in '.exe', '.zip', '.dmg', '.blockmap' }
+          if ($files.Count -eq 0) { throw '未找到可发布的安装包。' }
+          gh release create $env:GITHUB_REF_NAME @($files.FullName) --generate-notes --title $env:GITHUB_REF_NAME

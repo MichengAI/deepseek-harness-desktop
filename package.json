@@ -12,7 +12,11 @@
   },
   "config": {
     "bundledNodeVersion": "v24.19.0",
-    "bundledNodeSha256": "3602F2BB1A10F2CBAB4C36886218A33C1AB3DB87290E73B033C46C77147D0237"
+    "bundledNodeSha256": {
+      "win32-x64": "3602F2BB1A10F2CBAB4C36886218A33C1AB3DB87290E73B033C46C77147D0237",
+      "darwin-arm64": "27DB838BB204EF7C21DF2931F5656E4C8FB32E6E947F363A402B49714D32B5B1",
+      "darwin-x64": "1052EB9C7D6C60A79B968E09F75AF55A73462B0F6DFF0964336D63B5E13EB63C"
+    }
   },
   "main": "dist/src/main.js",
   "scripts": {
@@ -22,9 +26,11 @@
     "start": "pnpm run build && electron .",
     "prepare-runtime": "pnpm run build && node dist/scripts/prepare-runtime.js",
     "pack": "pnpm run prepare-runtime && electron-builder --dir",
-    "dist": "pnpm run prepare-runtime && electron-builder --publish never"
+    "dist": "pnpm run prepare-runtime && electron-builder --publish never",
+    "smoke:mac": "pnpm run build && node dist/scripts/smoke-macos-package.mjs"
   },
   "devDependencies": {
+    "@electron/notarize": "2.5.0",
     "@types/node": "26.2.0",
     "electron": "43.4.0",
     "electron-builder": "26.15.3",
@@ -34,6 +40,7 @@
     "appId": "ai.micheng.deepseekHarnessDesktop",
     "productName": "DeepSeek Harness Desktop",
     "asar": true,
+    "afterSign": "dist/scripts/notarize.mjs",
     "directories": {
       "output": "release"
     },
@@ -50,8 +57,8 @@
         ]
       },
       {
-        "from": "runtime\\node_modules",
-        "to": "dsh\\node_modules",
+        "from": "runtime/node_modules",
+        "to": "dsh/node_modules",
         "filter": [
           "**/*"
         ]
@@ -64,7 +71,7 @@
         ]
       },
       {
-        "from": "dist\\src\\dsh-bootstrap.mjs",
+        "from": "dist/src/dsh-bootstrap.mjs",
         "to": "bootstrap.mjs"
       }
     ],
@@ -73,7 +80,15 @@
         "nsis",
         "zip"
       ],
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "artifactName": "${productName}-${version}-win-${arch}.${ext}"
+    },
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
     },
     "nsis": {
       "perMachine": false,

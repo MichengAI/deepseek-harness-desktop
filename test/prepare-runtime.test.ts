@@ -5,7 +5,18 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 
-import { copyWorkspacePackages } from '../scripts/prepare-runtime.js'
+import { copyWorkspacePackages, resolveBundledNodeSha256 } from '../scripts/prepare-runtime.js'
+
+test('按目标平台选择随包 Node 的 SHA256', () => {
+  const checksums = {
+    'win32-x64': 'WINDOWS',
+    'darwin-arm64': 'APPLE_SILICON',
+    'darwin-x64': 'INTEL',
+  }
+  assert.equal(resolveBundledNodeSha256(checksums, 'darwin', 'arm64'), 'APPLE_SILICON')
+  assert.equal(resolveBundledNodeSha256(checksums, 'darwin', 'x64'), 'INTEL')
+  assert.throws(() => resolveBundledNodeSha256(checksums, 'linux', 'x64'), /缺少随包 Node SHA256/)
+})
 
 test('跳过指向普通文件的工作区链接', async t => {
   const root = await mkdtemp(join(tmpdir(), 'dsh-runtime-'))

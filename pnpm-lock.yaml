@@ -11,6 +11,9 @@ importers:
 
   .:
     devDependencies:
+      '@electron/notarize':
+        specifier: 2.5.0
+        version: 2.5.0(supports-color@7.1.0)
       '@types/node':
         specifier: 26.2.0
         version: 26.2.0
