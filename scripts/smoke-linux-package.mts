@@ -12,11 +12,17 @@ async function main(): Promise<void> {
   const applicationPath = resolve(readArgument('--application-path'))
   if (!existsSync(applicationPath)) throw new Error(`未找到 Linux 应用可执行文件：${applicationPath}`)
 
-  const application = spawn(applicationPath, [], { stdio: 'ignore' })
+  const application = spawn(applicationPath, [], { stdio: ['ignore', 'pipe', 'pipe'] })
   if (!application.pid) throw new Error('未获取到应用进程 ID。')
+  let applicationOutput = ''
+  const captureOutput = (chunk: Buffer): void => {
+    applicationOutput = (applicationOutput + chunk.toString('utf8')).slice(-4_096)
+  }
+  application.stdout?.on('data', captureOutput)
+  application.stderr?.on('data', captureOutput)
   let bootstrapProcessId: number | undefined
   try {
-    const baseUrl = await waitForHealthyServer(application.pid)
+    const baseUrl = await waitForHealthyServer(application, () => applicationOutput)
     bootstrapProcessId = await findBootstrapProcessId(application.pid)
     const page = await fetch(`${baseUrl}/`)
     if (page.status !== 200) throw new Error(`根页面返回 HTTP ${page.status}。`)
@@ -40,10 +46,13 @@ function readArgument(name: string): string {
   return value
 }
 
-async function waitForHealthyServer(applicationProcessId: number): Promise<string> {
+async function waitForHealthyServer(application: ChildProcess, getApplicationOutput: () => string): Promise<string> {
   const deadline = Date.now() + startupTimeoutMs
   while (Date.now() < deadline) {
-    const bootstrapProcessId = await findBootstrapProcessId(applicationProcessId)
+    if (application.exitCode !== null) {
+      throw new Error(`打包应用提前退出（退出码 ${application.exitCode}）。${getApplicationOutput()}`)
+    }
+    const bootstrapProcessId = await findBootstrapProcessId(application.pid!)
     if (bootstrapProcessId !== undefined) {
       const port = await findListeningPort(bootstrapProcessId)
       if (port !== undefined) return `http://127.0.0.1:${port}`
@@ -51,7 +60,7 @@ async function waitForHealthyServer(applicationProcessId: number): Promise<strin
     await delay(500)
   }
   const startupError = readStartupError()
-  throw new Error(`打包应用在 60 秒内未启动本机 HTTP 服务。${startupError === undefined ? '' : ` 启动诊断：${startupError}`}`)
+  throw new Error(`打包应用在 60 秒内未启动本机 HTTP 服务。${startupError === undefined ? getApplicationOutput() : ` 启动诊断：${startupError}`}`)
 }
 
 function readStartupError(): string | undefined {
