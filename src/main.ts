@@ -27,6 +27,7 @@ if (!app.requestSingleInstanceLock()) {
 
 async function startApplication(): Promise<void> {
   await app.whenReady()
+  Menu.setApplicationMenu(null)
   createTray()
 
   try {
