@@ -41,10 +41,10 @@ jobs:
         with:
           node-version: 24.19.0
 
-      - name: 配置 DSH 的 pnpm 11.7
+      - name: 配置 pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 11.7.0
+          version: 11.20.0
 
       - name: 检出固定 DSH 源码
         uses: actions/checkout@v4
@@ -62,10 +62,10 @@ jobs:
           $logDirectory = Join-Path $env:GITHUB_WORKSPACE 'ci-logs'
           $logPath = Join-Path $logDirectory 'dsh-build.log'
           New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
-          & pnpm install --frozen-lockfile 2>&1 | Tee-Object -FilePath $logPath
+          & corepack pnpm install --frozen-lockfile 2>&1 | Tee-Object -FilePath $logPath
           $exitCode = $LASTEXITCODE
           if ($exitCode -ne 0) { exit $exitCode }
-          & pnpm run build 2>&1 | Tee-Object -FilePath $logPath -Append
+          & corepack pnpm run build 2>&1 | Tee-Object -FilePath $logPath -Append
           $exitCode = $LASTEXITCODE
           if ($exitCode -ne 0) { exit $exitCode }
 
@@ -98,11 +98,6 @@ jobs:
           security unlock-keychain -p $env:MACOS_KEYCHAIN_PASSWORD build.keychain
           security import $certificatePath -k build.keychain -P $env:MACOS_CERTIFICATE_PASSWORD -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k $env:MACOS_KEYCHAIN_PASSWORD build.keychain
-
-      - name: 配置桌面端的 pnpm 11.20
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.20.0
 
       - name: 测试并打包桌面端
         shell: pwsh
