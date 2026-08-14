@@ -62,10 +62,10 @@ jobs:
           $logDirectory = Join-Path $env:GITHUB_WORKSPACE 'ci-logs'
           $logPath = Join-Path $logDirectory 'dsh-build.log'
           New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
-          & corepack pnpm install --frozen-lockfile 2>&1 | Tee-Object -FilePath $logPath
+          & npm exec --yes --package=pnpm@11.7.0 -- pnpm install --frozen-lockfile 2>&1 | Tee-Object -FilePath $logPath
           $exitCode = $LASTEXITCODE
           if ($exitCode -ne 0) { exit $exitCode }
-          & corepack pnpm run build 2>&1 | Tee-Object -FilePath $logPath -Append
+          & npm exec --yes --package=pnpm@11.7.0 -- pnpm run build 2>&1 | Tee-Object -FilePath $logPath -Append
           $exitCode = $LASTEXITCODE
           if ($exitCode -ne 0) { exit $exitCode }
 
