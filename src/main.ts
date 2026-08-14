@@ -28,7 +28,7 @@ if (!app.requestSingleInstanceLock()) {
 async function startApplication(): Promise<void> {
   await app.whenReady()
   Menu.setApplicationMenu(null)
-  createTray()
+  if (process.platform !== 'linux') createTray()
 
   try {
     const runtimeOptions = {
