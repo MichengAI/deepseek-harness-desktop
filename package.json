@@ -5,7 +5,7 @@
   "author": "MichengAI",
   "desktopName": "deepseek-harness-desktop",
   "private": true,
-  "license": "MIT",
+  "license": "Apache-2.0",
   "type": "module",
   "packageManager": "pnpm@11.20.0",
   "engines": {

@@ -19,7 +19,7 @@
 
 <p align="center">
   <a href="https://github.com/MichengAI/deepseek-harness-desktop/releases"><img src="https://img.shields.io/github/v/release/MichengAI/deepseek-harness-desktop?display_name=tag&label=release" alt="发布版本"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-yellow.svg" alt="MIT 许可证"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="Apache License 2.0 许可证"></a>
   <a href="https://github.com/MichengAI/deepseek-harness-desktop/actions/workflows/desktop-package.yml"><img src="https://github.com/MichengAI/deepseek-harness-desktop/actions/workflows/desktop-package.yml/badge.svg?branch=main" alt="桌面端打包"></a>
   <img src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-000000?logo=apple&logoColor=white" alt="macOS Apple Silicon 与 Intel">
   <img src="https://img.shields.io/badge/Windows-x64-0078D4?logo=windows&logoColor=white" alt="Windows x64">
@@ -135,4 +135,4 @@ pnpm run dist
 
 ## 许可证
 
-本项目采用 [MIT 许可证](LICENSE)。
+本项目采用 [Apache License 2.0](LICENSE)。
