@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, Tray, nativeImage, net, protocol, session, shell } from 'electron'
+import { app, BrowserWindow, Menu, Tray, dialog, nativeImage, net, protocol, session, shell } from 'electron'
 import { existsSync } from 'node:fs'
 import { writeFile as writeTextFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
@@ -19,6 +19,8 @@ import { resolvePrebuiltOfficialRuntime } from './runtime-prebuilt.js'
 import { applyInitialWindowState } from './window-state.js'
 import { installDesktopBridge, resolveDesktopBridgeDir } from './desktop-host.js'
 import { watchProfileActivation } from './profile-watch.js'
+import updater from 'electron-updater'
+import { buildDesktopTrayItems, desktopUpdatePrompt, publicDesktopUpdateError, type DesktopUpdateStatus } from './desktop-updater.js'
 
 let mainWindow: BrowserWindow | undefined
 let server: DshServer | undefined
@@ -28,6 +30,8 @@ let isRecycling = false
 let lastStartOptions: Omit<StartDshOptions, 'onUnexpectedExit' | 'onIpcMessage'> | undefined
 let lastSeedOptions: Parameters<typeof applyPendingProfileUpdates>[0] | undefined
 let profileWatcher: { stop: () => void; sync: () => void } | undefined
+let updateStatus: DesktopUpdateStatus = { kind: 'idle' }
+const { autoUpdater } = updater
 
 app.setName(DESKTOP_APP_NAME)
 app.setAppUserModelId(DESKTOP_APP_USER_MODEL_ID)
@@ -72,7 +76,8 @@ async function startApplication(): Promise<void> {
   await app.whenReady()
   installDesktopFaviconReplacement()
   Menu.setApplicationMenu(null)
-  if (process.platform !== 'linux') createTray()
+  configureDesktopUpdater()
+  createTray()
   await showStartupWindow('加载中')
 
   try {
@@ -335,7 +340,28 @@ function createWindow(): BrowserWindow {
   return window
 }
 
+function configureDesktopUpdater(): void {
+  autoUpdater.autoDownload = false
+  autoUpdater.autoInstallOnAppQuit = false
+  autoUpdater.on('download-progress', progress => {
+    updateStatus = { kind: 'downloading', percent: progress.percent }
+    refreshTrayMenu()
+  })
+  autoUpdater.on('update-downloaded', info => {
+    updateStatus = { kind: 'ready', version: info.version }
+    refreshTrayMenu()
+  })
+  autoUpdater.on('error', error => {
+    updateStatus = { kind: 'error', message: publicDesktopUpdateError(error) }
+    refreshTrayMenu()
+  })
+}
+
 function createTray(): void {
+  if (tray !== undefined) {
+    refreshTrayMenu()
+    return
+  }
   const rasterPath = resolveRasterIconPath({
     appPath: app.getAppPath(),
     isPackaged: app.isPackaged,
@@ -345,14 +371,161 @@ function createTray(): void {
   const icon = source.isEmpty()
     ? nativeImage.createEmpty()
     : source.resize({ width: TRAY_ICON_SIZE, height: TRAY_ICON_SIZE, quality: 'best' })
-  tray = new Tray(icon)
+  try {
+    tray = new Tray(icon)
+  } catch {
+    return
+  }
   tray.setToolTip(DESKTOP_APP_NAME)
-  tray.setContextMenu(Menu.buildFromTemplate([
-    { label: '显示窗口', click: () => showMainWindow() },
-    { type: 'separator' },
-    { label: '退出', click: () => { void requestQuit() } },
-  ]))
   tray.on('click', () => showMainWindow())
+  refreshTrayMenu()
+}
+
+function refreshTrayMenu(): void {
+  if (tray === undefined) return
+  const items = buildDesktopTrayItems({
+    status: updateStatus,
+    currentVersion: app.getVersion(),
+    packaged: app.isPackaged,
+  })
+  tray.setContextMenu(Menu.buildFromTemplate(items.map(item => {
+    if (item.type === 'separator') return { type: 'separator' }
+    return {
+      label: item.label,
+      enabled: item.enabled,
+      click: () => { void handleTrayUpdateAction(item.id) },
+    }
+  })))
+}
+
+async function handleTrayUpdateAction(id: string): Promise<void> {
+  if (id === 'show') {
+    showMainWindow()
+    return
+  }
+  if (id === 'quit') {
+    await requestQuit()
+    return
+  }
+  if (id === 'check') {
+    await checkDesktopUpdate()
+    return
+  }
+  if (id === 'download') {
+    await downloadDesktopUpdate()
+    return
+  }
+  if (id === 'install') {
+    await installDesktopUpdate()
+  }
+}
+
+async function checkDesktopUpdate(): Promise<void> {
+  if (!app.isPackaged) {
+    await dialog.showMessageBox({
+      type: 'info',
+      title: DESKTOP_APP_NAME,
+      message: '开发态不能检查安装包更新，请使用发布的安装包。',
+    })
+    return
+  }
+  updateStatus = { kind: 'checking' }
+  refreshTrayMenu()
+  try {
+    const result = await autoUpdater.checkForUpdates()
+    const version = result?.updateInfo.version
+    if (version === undefined || version === app.getVersion()) {
+      updateStatus = { kind: 'none' }
+      refreshTrayMenu()
+      await dialog.showMessageBox({
+        type: 'info',
+        title: DESKTOP_APP_NAME,
+        message: '当前已是最新桌面端版本。',
+      })
+      return
+    }
+    updateStatus = { kind: 'available', version, releaseNotes: releaseNotesText(result?.updateInfo.releaseNotes) }
+    refreshTrayMenu()
+    const prompt = await dialog.showMessageBox({
+      type: 'question',
+      title: DESKTOP_APP_NAME,
+      message: desktopUpdatePrompt(updateStatus),
+      buttons: ['下载并安装', '取消'],
+      defaultId: 0,
+      cancelId: 1,
+    })
+    if (prompt.response === 0) await downloadDesktopUpdate()
+  } catch (error) {
+    const message = publicDesktopUpdateError(error)
+    updateStatus = { kind: 'error', message }
+    refreshTrayMenu()
+    await dialog.showMessageBox({
+      type: 'error',
+      title: DESKTOP_APP_NAME,
+      message,
+    })
+  }
+}
+
+async function downloadDesktopUpdate(): Promise<void> {
+  if (updateStatus.kind !== 'available') return
+  const version = updateStatus.version
+  updateStatus = { kind: 'downloading', percent: 0 }
+  refreshTrayMenu()
+  try {
+    await autoUpdater.downloadUpdate()
+    const ready = { kind: 'ready' as const, version }
+    updateStatus = ready
+    refreshTrayMenu()
+    const prompt = await dialog.showMessageBox({
+      type: 'question',
+      title: DESKTOP_APP_NAME,
+      message: desktopUpdatePrompt(ready),
+      buttons: ['现在安装', '稍后'],
+      defaultId: 0,
+      cancelId: 1,
+    })
+    if (prompt.response === 0) await installDesktopUpdate()
+  } catch (error) {
+    const message = publicDesktopUpdateError(error)
+    updateStatus = { kind: 'error', message }
+    refreshTrayMenu()
+    await dialog.showMessageBox({
+      type: 'error',
+      title: DESKTOP_APP_NAME,
+      message,
+    })
+  }
+}
+
+async function installDesktopUpdate(): Promise<void> {
+  await quitDesktopApp({
+    isQuitting,
+    markQuitting: () => { isQuitting = true },
+    destroyTray: () => {
+      tray?.destroy()
+      tray = undefined
+      profileWatcher?.stop()
+      profileWatcher = undefined
+    },
+    stopServer: async () => {
+      const current = server
+      server = undefined
+      await current?.stop()
+    },
+    exit: () => {
+      autoUpdater.quitAndInstall(false, true)
+    },
+  })
+}
+
+function releaseNotesText(notes: string | Array<{ note?: string | null }> | null | undefined): string | undefined {
+  if (typeof notes === 'string' && notes.trim() !== '') return notes.trim()
+  if (Array.isArray(notes)) {
+    const text = notes.map(item => item.note ?? '').join('\n').trim()
+    if (text !== '') return text
+  }
+  return undefined
 }
 
 function showMainWindow(): void {

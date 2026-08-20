@@ -147,6 +147,19 @@
         "from": "assets/icons/icon.ico",
         "to": "DSH Codex Desktop.ico"
       }
-    ]
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "MichengAI",
+      "repo": "dsh-codex-desktop",
+      "releaseType": "release"
+    }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MichengAI/dsh-codex-desktop.git"
   }
 }
