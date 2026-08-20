@@ -71,7 +71,8 @@ jobs:
           $certificateValues = @($env:MACOS_CERTIFICATE, $env:MACOS_CERTIFICATE_PASSWORD, $env:MACOS_KEYCHAIN_PASSWORD)
           $configuredCount = @($certificateValues | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count
           if ($configuredCount -eq 0) {
-            throw '正式标签发布必须配置 macOS 签名证书。'
+            Write-Host '未配置 macOS 签名证书，继续生成未签名测试版。'
+            exit 0
           }
           if ($configuredCount -ne $certificateValues.Count) {
             throw 'macOS 签名凭据必须同时完整配置或全部留空。'
@@ -84,7 +85,7 @@ jobs:
           security import $certificatePath -k build.keychain -P $env:MACOS_CERTIFICATE_PASSWORD -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k $env:MACOS_KEYCHAIN_PASSWORD build.keychain
 
-      - name: 校验 Windows 正式发布签名凭据
+      - name: 检查 Windows 正式发布签名凭据
         if: matrix.platform == 'windows-x64' && startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         env:
@@ -93,8 +94,14 @@ jobs:
         run: |
           [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
           $OutputEncoding = [System.Text.Encoding]::UTF8
-          if ([string]::IsNullOrWhiteSpace($env:CSC_LINK) -or [string]::IsNullOrWhiteSpace($env:CSC_KEY_PASSWORD)) {
-            throw '正式标签发布必须配置 Windows 代码签名凭据。'
+          $certificateValues = @($env:CSC_LINK, $env:CSC_KEY_PASSWORD)
+          $configuredCount = @($certificateValues | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count
+          if ($configuredCount -eq 0) {
+            Write-Host '未配置 Windows 代码签名凭据，继续生成未签名测试版。'
+            exit 0
+          }
+          if ($configuredCount -ne $certificateValues.Count) {
+            throw 'Windows 代码签名凭据必须同时完整配置或全部留空。'
           }
 
       - name: 测试并打包桌面端

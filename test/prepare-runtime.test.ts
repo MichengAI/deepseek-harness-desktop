@@ -180,6 +180,13 @@ test('Windows 冒烟在启动应用前复用安装器的运行时解压入口', 
   assert.equal(extractAt < startAt, true)
 })
 
+test('正式标签缺少签名凭据时仍允许生成多平台测试版', async () => {
+  const workflow = await readFile(new URL('../../.github/workflows/desktop-package.yml', import.meta.url), 'utf8')
+  assert.match(workflow, /未配置 Windows 代码签名凭据，继续生成未签名测试版/)
+  assert.match(workflow, /未配置 macOS 签名证书，继续生成未签名测试版/)
+  assert.doesNotMatch(workflow, /正式标签发布必须配置 (?:Windows|macOS)/)
+})
+
 test('打包态从 desktop-bridge 加载 DSH 主进程模块', async () => {
   const main = await readFile(new URL('../../src/main.ts', import.meta.url), 'utf8')
   const host = await readFile(new URL('../../src/desktop-host.ts', import.meta.url), 'utf8')

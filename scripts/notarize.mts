@@ -23,9 +23,10 @@ export function isNotarizationConfigured(
 }
 
 export function assertNotarizationConfigured(appleId?: string, appleIdPassword?: string, teamId?: string): void {
-  if (!isNotarizationConfigured(appleId, appleIdPassword, teamId)) {
-    throw new Error('正式标签发布必须配置完整的 Apple 公证凭据。')
-  }
+  const values = [appleId, appleIdPassword, teamId]
+  const configuredCount = values.filter(Boolean).length
+  if (configuredCount === 0) return
+  if (configuredCount !== values.length) throw new Error('Apple 公证凭据必须同时完整配置或全部留空。')
 }
 
 export default async function notarizeApplication(context: AfterSignContext): Promise<void> {

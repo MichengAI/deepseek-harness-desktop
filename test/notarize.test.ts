@@ -12,6 +12,7 @@ test('仅凭据完整时执行 macOS 公证', () => {
   assert.equal(isNotarizationConfigured(undefined, undefined, undefined), false)
   assert.equal(isNotarizationConfigured('user@example.com', 'password', undefined), false)
   assert.equal(isNotarizationConfigured('user@example.com', 'password', 'TEAMID'), true)
-  assert.throws(() => assertNotarizationConfigured(undefined, undefined, undefined), /正式标签发布必须配置/)
+  assert.doesNotThrow(() => assertNotarizationConfigured(undefined, undefined, undefined))
+  assert.throws(() => assertNotarizationConfigured('user@example.com', undefined, undefined), /必须同时完整配置/)
   assert.doesNotThrow(() => assertNotarizationConfigured('user@example.com', 'password', 'TEAMID'))
 })
