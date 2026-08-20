@@ -1,6 +1,6 @@
 {
   "name": "deepseek-harness-desktop",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "DeepSeek Harness 原生桌面启动器",
   "author": "MichengAI",
   "desktopName": "DSH Codex Desktop",
@@ -51,7 +51,7 @@
       "output": "release"
     },
     "files": [
-      "dist/**/*",
+      "dist/src/*.js",
       "package.json"
     ],
     "extraResources": [
