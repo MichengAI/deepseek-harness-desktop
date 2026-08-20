@@ -8,8 +8,10 @@ test('开发态和空闲态都提供手动检查，不自动下载', () => {
   const idle = buildDesktopTrayItems({ status: { kind: 'idle' }, currentVersion: '0.1.4', packaged: true })
   assert.equal(idle.some(item => item.id === 'check' && item.enabled), true)
   assert.equal(idle.some(item => item.id === 'download'), false)
+  assert.equal(idle.some(item => item.id === 'reload' && item.label === '重新加载 DSH'), true)
   const dev = buildDesktopTrayItems({ status: { kind: 'idle' }, currentVersion: '0.1.4', packaged: false })
   assert.equal(dev.some(item => item.id === 'check' && item.enabled), true)
+  assert.equal(dev.some(item => item.id === 'reload' && item.enabled), true)
 })
 
 test('发现新版本后托盘只出现下载安装，不出现自动安装文案', () => {

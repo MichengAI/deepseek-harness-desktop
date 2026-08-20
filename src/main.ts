@@ -403,6 +403,10 @@ async function handleTrayUpdateAction(id: string): Promise<void> {
     showMainWindow()
     return
   }
+  if (id === 'reload') {
+    await recycleDshForPluginUpdate()
+    return
+  }
   if (id === 'quit') {
     await requestQuit()
     return

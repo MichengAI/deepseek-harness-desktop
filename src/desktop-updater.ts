@@ -40,6 +40,7 @@ export function buildDesktopTrayItems(input: {
 }): DesktopTrayItem[] {
   const items: DesktopTrayItem[] = [
     { id: 'show', label: '显示窗口', enabled: true, type: 'normal' },
+    { id: 'reload', label: '重新加载 DSH', enabled: true, type: 'normal' },
     { id: 'sep-1', label: '', enabled: false, type: 'separator' },
     { id: 'version', label: `当前版本 ${input.currentVersion}`, enabled: false, type: 'normal' },
   ]
