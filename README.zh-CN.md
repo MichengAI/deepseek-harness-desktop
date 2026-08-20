@@ -132,7 +132,7 @@ DSH Codex Desktop 把核心运行时、功能产品和插件市场组合成一�
 
 ## 开发
 
-开发环境需要 Windows、Node.js `24.19.0` 和 pnpm `11.20.0`。
+开发环境需要 Windows、Node.js `24.19.0` 和 pnpm `11.22.0`。
 
 ```powershell
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8

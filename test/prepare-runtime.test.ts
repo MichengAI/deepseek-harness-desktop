@@ -174,14 +174,18 @@ test('Windows 冒烟检查使用实际产品可执行文件名', async () => {
 
 test('Windows 冒烟在启动应用前复用安装器的运行时解压入口', async () => {
   const script = await readFile(new URL('../../scripts/smoke-package.ps1', import.meta.url), 'utf8')
+  const main = await readFile(new URL('../../src/main.ts', import.meta.url), 'utf8')
   const extractAt = script.indexOf('extract-runtime.mjs')
   const startAt = script.indexOf('Start-Process')
   assert.notEqual(extractAt, -1)
   assert.equal(extractAt < startAt, true)
+  assert.match(script, /--user-data-dir=/)
+  assert.match(main, /--user-data-dir=/)
 })
 
 test('正式标签缺少签名凭据时仍允许生成多平台测试版', async () => {
   const workflow = await readFile(new URL('../../.github/workflows/desktop-package.yml', import.meta.url), 'utf8')
+  assert.match(workflow, /version: 11\.22\.0/)
   assert.match(workflow, /未配置 Windows 代码签名凭据，继续生成未签名测试版/)
   assert.match(workflow, /未配置 macOS 签名证书，继续生成未签名测试版/)
   assert.doesNotMatch(workflow, /正式标签发布必须配置 (?:Windows|macOS)/)

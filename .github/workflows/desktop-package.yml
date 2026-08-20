@@ -48,7 +48,7 @@ jobs:
       - name: 配置 pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 11.20.0
+          version: 11.22.0
 
       - name: 安装 Linux 冒烟依赖
         if: matrix.platform == 'linux-x64'

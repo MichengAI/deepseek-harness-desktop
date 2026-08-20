@@ -17,10 +17,18 @@ if ((Test-Path -LiteralPath $bundledNode) -and (Test-Path -LiteralPath $runtimeE
   & $bundledNode $runtimeExtractor $installDir $resourcesDir
   if ($LASTEXITCODE -ne 0) { throw "随包运行时解压失败，退出码：$LASTEXITCODE" }
 }
-$application = Start-Process -FilePath $resolvedApplication -PassThru
+$tempBase = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
+$tempRoot = Join-Path $tempBase ("dsh-desktop-smoke-$([guid]::NewGuid().ToString('N'))")
+$userDataDir = Join-Path $tempRoot 'user-data'
+$dshHome = Join-Path $tempRoot 'dsh-home'
+New-Item -ItemType Directory -Path $userDataDir, $dshHome -Force | Out-Null
+$previousDshHome = $env:DSH_HOME
+$env:DSH_HOME = $dshHome
+$application = $null
 $bootstrapProcessId = $null
 
 try {
+  $application = Start-Process -FilePath $resolvedApplication -ArgumentList "--user-data-dir=$userDataDir" -PassThru
   $deadline = (Get-Date).AddSeconds(60)
   $port = $null
   while ((Get-Date) -lt $deadline -and $null -eq $port) {
@@ -46,18 +54,27 @@ try {
   $assetResponse = Invoke-WebRequest -Uri "$baseUrl$($asset.Groups['path'].Value)" -UseBasicParsing
   if ($assetResponse.StatusCode -ne 200) { throw "前端资源返回 HTTP $($assetResponse.StatusCode)。" }
 } finally {
-  $application.Refresh()
-  if (-not $application.HasExited) {
-    Stop-Process -Id $application.Id -Force -ErrorAction SilentlyContinue
-    $application.WaitForExit(10000) | Out-Null
+  if ($null -ne $application) {
+    $application.Refresh()
+    if (-not $application.HasExited) {
+      Stop-Process -Id $application.Id -Force -ErrorAction SilentlyContinue
+      $application.WaitForExit(10000) | Out-Null
+    }
   }
+  $bootstrapStillRunning = $false
   if ($null -ne $bootstrapProcessId) {
     $deadline = (Get-Date).AddSeconds(10)
     while ((Get-Date) -lt $deadline -and (Get-Process -Id $bootstrapProcessId -ErrorAction SilentlyContinue)) {
       Start-Sleep -Milliseconds 250
     }
     if (Get-Process -Id $bootstrapProcessId -ErrorAction SilentlyContinue) {
-      throw "DSH 引导进程 $bootstrapProcessId 未在应用退出后结束。"
+      $bootstrapStillRunning = $true
     }
   }
+  $env:DSH_HOME = $previousDshHome
+  $resolvedTempRoot = [System.IO.Path]::GetFullPath($tempRoot)
+  if ($resolvedTempRoot.StartsWith($tempBase, [System.StringComparison]::OrdinalIgnoreCase)) {
+    Remove-Item -LiteralPath $resolvedTempRoot -Recurse -Force -ErrorAction SilentlyContinue
+  }
+  if ($bootstrapStillRunning) { throw "DSH 引导进程 $bootstrapProcessId 未在应用退出后结束。" }
 }

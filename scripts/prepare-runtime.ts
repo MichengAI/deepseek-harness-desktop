@@ -12,7 +12,7 @@ const projectRoot = resolve(import.meta.dirname, '..', '..')
 const nodeRoot = join(projectRoot, 'runtime-node')
 const pluginRoot = join(projectRoot, 'runtime-plugins')
 const officialRuntimeRoot = join(projectRoot, 'runtime-dsh')
-const bundledPnpmVersion = '11.20.0'
+const bundledPnpmVersion = '11.22.0'
 
 export async function removePreparedPath(target: string): Promise<void> {
   if (!existsSync(target)) return
@@ -152,7 +152,7 @@ export async function stageBundledPlugins(destinationRoot: string, nodeRoot: str
     name: 'dsh-desktop-bundled-plugins',
     private: true,
     pnpm: officialRuntimePnpmConfig(),
-    dependencies: stagedPluginDependencies(stagedPackages),
+    dependencies: Object.fromEntries(stagedPackages.map(plugin => [plugin.packageName, plugin.version])),
   }, undefined, 2) + '\n', 'utf8')
   await writeFile(join(stagingDir, 'pnpm-workspace.yaml'), pnpmWorkspaceYaml(), 'utf8')
   runStagedPnpm(nodeRoot, [
@@ -214,16 +214,6 @@ export async function stageOfficialRuntime(destinationRoot: string, nodeRoot: st
   }
 }
 
-function stagedPluginDependencies(plugins: readonly { packageName: string; version: string }[]): Record<string, string> {
-  const dependencies = Object.fromEntries(plugins.map(plugin => [plugin.packageName, plugin.version]))
-  const localUi = resolve(projectRoot, '..', 'dsh-codex-ui')
-  const manifestPath = join(localUi, 'package.json')
-  if (!existsSync(manifestPath)) return dependencies
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { name?: unknown }
-  if (manifest.name !== '@michengai/dsh-codex-ui') return dependencies
-  dependencies['@michengai/dsh-codex-ui'] = 'file:' + localUi
-  return dependencies
-}
 export async function pruneStoreForPackaging(storeDir: string): Promise<void> {
   const projects = join(storeDir, 'v11', 'projects')
   if (existsSync(projects)) await removePreparedPath(projects)
@@ -234,6 +224,10 @@ async function materializePnpmPackage(destinationRoot: string): Promise<string> 
   await mkdir(destination, { recursive: true })
   try {
     await cp(resolvePnpmPackageRoot(), destination, { dereference: true, recursive: true })
+    const copiedManifest = JSON.parse(await readFile(join(destination, 'package.json'), 'utf8')) as { name?: unknown; version?: unknown }
+    if (!['pnpm', '@pnpm/exe'].includes(String(copiedManifest.name)) || copiedManifest.version !== bundledPnpmVersion) {
+      throw new Error('当前 pnpm 与随包版本不一致。')
+    }
     resolvePnpmEntry(destination)
     return destination
   } catch {

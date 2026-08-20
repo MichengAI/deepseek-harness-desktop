@@ -132,7 +132,7 @@ DSH Codex Desktop combines the core runtime, feature products, and plugin market
 
 ## Development
 
-Development requires Windows, Node.js `24.19.0`, and pnpm `11.20.0`.
+Development requires Windows, Node.js `24.19.0`, and pnpm `11.22.0`.
 
 ```powershell
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8

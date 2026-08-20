@@ -30,6 +30,15 @@ test('每个内置插件都钉死精确版本', () => {
     assert.equal(plugin.packageName.startsWith('@michengai/') || plugin.packageName === 'dshmarket', true)
   }
   assert.equal(BUNDLED_PLUGINS.find(plugin => plugin.packageName === 'dshmarket')?.version, '1.16.0')
+  assert.deepEqual(Object.fromEntries(BUNDLED_PLUGINS.map(plugin => [plugin.packageName, plugin.version])), {
+    '@michengai/dsh-codex-ui': '0.2.64',
+    '@michengai/dsh-im-connect': '0.1.13',
+    '@michengai/dsh-automation': '0.1.5',
+    '@michengai/dsh-skills-manager': '0.1.23',
+    '@michengai/dsh-archive-manager': '0.1.12',
+    '@michengai/dsh-agency-agents': '0.1.20',
+    dshmarket: '1.16.0',
+  })
 })
 
 test('官方 DSH 家族锁在同一个精确版本', () => {

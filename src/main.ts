@@ -49,7 +49,9 @@ process.on('unhandledRejection', handleUnexpectedMainError)
 
 app.setName(DESKTOP_APP_NAME)
 app.setAppUserModelId(DESKTOP_APP_USER_MODEL_ID)
-app.setPath('userData', resolveDesktopUserDataDir(app.getPath('appData')))
+if (!process.argv.some(argument => argument.startsWith('--user-data-dir='))) {
+  app.setPath('userData', resolveDesktopUserDataDir(app.getPath('appData')))
+}
 protocol.registerSchemesAsPrivileged([
   { scheme: 'dsh-icon', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
 ])
