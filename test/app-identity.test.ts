@@ -16,6 +16,7 @@ test('打包后官方运行时优先放安装目录，而不是 C 盘 AppData', 
     resolveDesktopRuntimeDir(userData, {
       isPackaged: true,
       execPath: 'D:\\Apps\\DSH Codex Desktop\\DSH Codex Desktop.exe',
+      platform: 'win32',
       canWrite: () => true,
     }),
     join('D:\\Apps\\DSH Codex Desktop', 'dsh-runtime'),
@@ -28,6 +29,7 @@ test('安装目录不可写时才回退到用户数据目录', () => {
     resolveDesktopRuntimeDir(userData, {
       isPackaged: true,
       execPath: 'C:\\Program Files\\DSH Codex Desktop\\DSH Codex Desktop.exe',
+      platform: 'win32',
       canWrite: () => false,
     }),
     join(userData, 'dsh-runtime'),

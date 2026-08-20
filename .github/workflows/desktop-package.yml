@@ -110,14 +110,21 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          CSC_LINK: ${{ startsWith(matrix.platform, 'windows-') && secrets.WINDOWS_CERTIFICATE || '' }}
-          CSC_KEY_PASSWORD: ${{ startsWith(matrix.platform, 'windows-') && secrets.WINDOWS_CERTIFICATE_PASSWORD || '' }}
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: |
           [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
           $OutputEncoding = [System.Text.Encoding]::UTF8
+          if ('${{ matrix.platform }}' -eq 'windows-x64' -and -not [string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE)) {
+            $env:CSC_LINK = $env:WINDOWS_CERTIFICATE
+            $env:CSC_KEY_PASSWORD = $env:WINDOWS_CERTIFICATE_PASSWORD
+          }
           pnpm install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pnpm test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pnpm run dist -- ${{ matrix.buildArguments }}
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           if ('${{ matrix.platform }}' -eq 'macos-arm64') {
             Move-Item -LiteralPath 'release/latest-mac.yml' -Destination 'release/latest-arm64-mac.yml'

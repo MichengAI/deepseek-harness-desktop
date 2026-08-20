@@ -4,6 +4,11 @@ import test from 'node:test'
 
 import { profileActivationFingerprint, shouldRecycleForProfileFingerprint, watchProfileActivation } from '../src/profile-watch.js'
 
+async function waitFor(predicate: () => boolean, timeoutMs = 1_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  while (!predicate() && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10))
+}
+
 test('依赖或 bundle 变化才需要热重启 DSH', () => {
   const installed = (name: string) => name !== 'dsh-file-upload'
   const before = profileActivationFingerprint(JSON.stringify({
@@ -49,7 +54,7 @@ test('profile 清单变化后会触发一次热重启', async () => {
     dsh: { profile: { bundles: ['dsh-file-upload'] } },
   }))
   listener?.('change', 'package.json')
-  await new Promise((resolve) => setTimeout(resolve, 50))
+  await new Promise(resolve => setTimeout(resolve, 80))
   assert.equal(fired.length, 0)
   installed.add('dsh-better-sidebar')
   files.set('D:\\profile\\web\\package.json', JSON.stringify({
@@ -58,11 +63,11 @@ test('profile 清单变化后会触发一次热重启', async () => {
   }))
   listener?.('change', 'package.json')
   listener?.('change', 'package.json')
-  await new Promise((resolve) => setTimeout(resolve, 50))
+  await waitFor(() => fired.length === 1)
   assert.equal(fired.length, 1)
   handle.sync()
   listener?.('change', 'package.json')
-  await new Promise((resolve) => setTimeout(resolve, 50))
+  await new Promise(resolve => setTimeout(resolve, 80))
   assert.equal(fired.length, 1)
   handle.stop()
 })
