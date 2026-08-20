@@ -152,12 +152,17 @@ test('清理运行时目录必须可重试，避免 Windows ENOTEMPTY', async ()
   assert.equal(existsSync(root), false)
 })
 
-test('打包配置以完整编译产物为基础排除源码', async () => {
+test('打包配置显式映射完整编译产物', async () => {
   const manifest = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8')) as {
-    build?: { files?: string[] }
+    build?: { files?: Array<string | { from?: string; to?: string; filter?: string[] }> }
   }
-  assert.equal(manifest.build?.files?.includes('**/*'), true)
-  assert.equal(manifest.build?.files?.includes('!src{,/**/*}'), true)
+  assert.equal(
+    manifest.build?.files?.some(item => typeof item !== 'string'
+      && item.from === 'dist'
+      && item.to === 'dist'
+      && item.filter?.includes('**/*')),
+    true,
+  )
 })
 
 test('Windows 冒烟检查使用实际产品可执行文件名', async () => {

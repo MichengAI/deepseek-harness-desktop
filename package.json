@@ -51,19 +51,14 @@
       "output": "release"
     },
     "files": [
-      "**/*",
-      "!src{,/**/*}",
-      "!scripts{,/**/*}",
-      "!test{,/**/*}",
-      "!assets{,/**/*}",
-      "!build{,/**/*}",
-      "!docs{,/**/*}",
-      "!release{,/**/*}",
-      "!runtime{,/**/*}",
-      "!runtime-node{,/**/*}",
-      "!runtime-plugins{,/**/*}",
-      "!runtime-dsh{,/**/*}",
-      "!runtime-dsh.tgz"
+      {
+        "from": "dist",
+        "to": "dist",
+        "filter": [
+          "**/*"
+        ]
+      },
+      "package.json"
     ],
     "extraResources": [
       {

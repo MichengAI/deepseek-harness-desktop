@@ -16,13 +16,18 @@ async function main(): Promise<void> {
   const applicationExecutable = resolveMacApplicationExecutable(applicationBundle)
   if (!existsSync(applicationExecutable)) throw new Error(`未找到 macOS 应用可执行文件：${applicationExecutable}`)
 
-  const application = spawn(applicationExecutable, [], { stdio: 'ignore' })
+  const application = spawn(applicationExecutable, [], { stdio: ['ignore', 'pipe', 'pipe'] })
   if (!application.pid) throw new Error('未获取到应用进程 ID。')
-  const applicationProcessId = application.pid
+  let applicationOutput = ''
+  const captureOutput = (chunk: Buffer): void => {
+    applicationOutput = (applicationOutput + chunk.toString('utf8')).slice(-4_096)
+  }
+  application.stdout?.on('data', captureOutput)
+  application.stderr?.on('data', captureOutput)
   let bootstrapProcessId: number | undefined
   try {
-    const baseUrl = await waitForHealthyServer(applicationProcessId)
-    bootstrapProcessId = await findBootstrapProcessId(applicationProcessId)
+    const baseUrl = await waitForHealthyServer(application, () => applicationOutput)
+    bootstrapProcessId = await findBootstrapProcessId(application.pid)
     const page = await fetch(`${baseUrl}/`)
     if (page.status !== 200) throw new Error(`根页面返回 HTTP ${page.status}。`)
     const content = await page.text()
@@ -45,18 +50,21 @@ function readArgument(name: string): string {
   return value
 }
 
-async function waitForHealthyServer(applicationProcessId: number | undefined): Promise<string> {
-  if (!applicationProcessId) throw new Error('未获取到应用进程 ID。')
+async function waitForHealthyServer(application: ChildProcess, getApplicationOutput: () => string): Promise<string> {
+  if (!application.pid) throw new Error('未获取到应用进程 ID。')
   const deadline = Date.now() + startupTimeoutMs
   while (Date.now() < deadline) {
-    const bootstrapProcessId = await findBootstrapProcessId(applicationProcessId)
+    if (application.exitCode !== null) {
+      throw new Error(`打包应用提前退出（退出码 ${application.exitCode}）。${getApplicationOutput()}`)
+    }
+    const bootstrapProcessId = await findBootstrapProcessId(application.pid)
     if (bootstrapProcessId !== undefined) {
       const port = await findListeningPort(bootstrapProcessId)
       if (port !== undefined) return `http://127.0.0.1:${port}`
     }
     await delay(500)
   }
-  throw new Error('打包应用在 60 秒内未启动本机 HTTP 服务。')
+  throw new Error(`打包应用在 60 秒内未启动本机 HTTP 服务。${getApplicationOutput()}`)
 }
 
 async function findBootstrapProcessId(applicationProcessId: number): Promise<number | undefined> {
