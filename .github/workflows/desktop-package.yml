@@ -104,7 +104,7 @@ jobs:
         run: |
           [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
           $OutputEncoding = [System.Text.Encoding]::UTF8
-          .\scripts\smoke-package.ps1 -ApplicationPath 'release\win-unpacked\dsh-codex-desktop.exe'
+          .\scripts\smoke-package.ps1 -ApplicationPath 'release\win-unpacked\DSH Codex Desktop.exe'
 
       - name: 冒烟检查 macOS 打包应用
         if: startsWith(matrix.platform, 'macos-')

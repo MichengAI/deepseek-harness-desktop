@@ -151,3 +151,15 @@ test('清理运行时目录必须可重试，避免 Windows ENOTEMPTY', async ()
   await removePreparedPath(root)
   assert.equal(existsSync(root), false)
 })
+
+test('打包配置显式包含 DSH 主进程依赖', async () => {
+  const manifest = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8')) as {
+    build?: { files?: string[] }
+  }
+  assert.equal(manifest.build?.files?.includes('dist/src/dsh-process.js'), true)
+})
+
+test('Windows 冒烟检查使用实际产品可执行文件名', async () => {
+  const workflow = await readFile(new URL('../../.github/workflows/desktop-package.yml', import.meta.url), 'utf8')
+  assert.match(workflow, /release\\win-unpacked\\DSH Codex Desktop\.exe/)
+})
