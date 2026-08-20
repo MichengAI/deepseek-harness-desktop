@@ -4,7 +4,7 @@ import { basename, join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
-const startupTimeoutMs = 60_000
+const startupTimeoutMs = 120_000
 
 export function resolveMacApplicationExecutable(applicationBundle: string, executableName = 'DSH Codex Desktop'): string {
   return join(applicationBundle, 'Contents', 'MacOS', executableName)
@@ -64,7 +64,7 @@ async function waitForHealthyServer(application: ChildProcess, getApplicationOut
     }
     await delay(500)
   }
-  throw new Error(`打包应用在 60 秒内未启动本机 HTTP 服务。${getApplicationOutput()}`)
+  throw new Error(`打包应用在 ${startupTimeoutMs / 1_000} 秒内未启动本机 HTTP 服务。${getApplicationOutput()}`)
 }
 
 async function findBootstrapProcessId(applicationProcessId: number): Promise<number | undefined> {
