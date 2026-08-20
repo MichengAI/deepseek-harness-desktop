@@ -8,6 +8,11 @@ import test from 'node:test'
 import { APPLY_PLUGIN_UPDATES_IPC, OFFICIAL_DSH_VERSION } from '../src/bundled-plugins.js'
 import { createDesktopHostServices, DESKTOP_BRIDGE_FILES, ensureDesktopBridgePatch, installDesktopBridge, mergeDesktopBridgePatch, officialPluginUpdateVersion, runBundledPnpm, shouldRecycleAfterPluginArgs, shouldRecycleAfterPluginResult } from '../src/desktop-host.js'
 
+async function waitFor(predicate: () => boolean | Promise<boolean>, timeoutMs = 1_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  while (!(await predicate()) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10))
+}
+
 test('市场安装和卸载后需要热更新 DSH', () => {
   assert.equal(shouldRecycleAfterPluginArgs(['add', 'foo@1.0.0']), true)
   assert.equal(shouldRecycleAfterPluginArgs(['remove', 'foo']), true)
@@ -46,7 +51,7 @@ test('desktopPnpm 安装成功后通知桌面端热更新', async () => {
   assert.equal(host.desktopPnpm.connected, true)
   assert.equal(typeof host.desktopPnpm.run, 'function')
   await host.desktopPnpm.runPlugin(['add', 'demo@1.0.0'], 'D:\\profile\\web').done
-  await new Promise((resolve) => setTimeout(resolve, 10))
+  await waitFor(() => sent.length === 1)
   assert.deepEqual(sent, [APPLY_PLUGIN_UPDATES_IPC])
 })
 
@@ -82,7 +87,6 @@ test('安装失败时不得把残留包写进运行清单或重启', async () =>
       },
     })
     await host.desktopPnpm.runPlugin(['add', 'dsh-file-upload@0.4.3'], root).done
-    await new Promise((resolve) => setTimeout(resolve, 10))
     const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')) as { dsh?: { profile?: { bundles?: string[] } } }
     assert.equal(manifest.dsh?.profile?.bundles?.includes('dsh-file-upload'), false)
     assert.deepEqual(sent, [])
@@ -115,7 +119,7 @@ test('pnpm 成功退出时不应因可选依赖脚本提示阻断热更新', asy
     },
   })
   await host.desktopPnpm.runPlugin(['add', 'dsh-file-upload@0.4.3'], 'D:\\profile\\web').done
-  await new Promise((resolve) => setTimeout(resolve, 10))
+  await waitFor(() => sent.length === 1)
   assert.deepEqual(sent, [APPLY_PLUGIN_UPDATES_IPC])
 })
 test('会把桌面桥接插件写进 profile patch 顶部', async () => {
@@ -224,7 +228,10 @@ test('后续成功安装不会激活上次失败留下的无关依赖', async ()
       runner: () => successfulHandle(),
     })
     await host.desktopPnpm.runPlugin(['add', 'good-plugin@1.0.0'], root).done
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await waitFor(async () => {
+      const current = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')) as { dsh?: { profile?: { bundles?: string[] } } }
+      return current.dsh?.profile?.bundles?.includes('good-plugin') === true
+    })
     const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')) as { dsh?: { profile?: { bundles?: string[] } } }
     assert.equal(manifest.dsh?.profile?.bundles?.includes('good-plugin'), true)
     assert.equal(manifest.dsh?.profile?.bundles?.includes('stale-plugin'), false)
