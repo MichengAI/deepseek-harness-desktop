@@ -1,9 +1,10 @@
 import { spawn } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 
+import { writeTextFileAtomic, writeTextFileAtomicSync } from './atomic-file.js'
 import {
   BUNDLED_PLUGINS,
   OFFICIAL_DSH_VERSION,
@@ -18,6 +19,7 @@ import {
   type BundledPlugin,
 } from './bundled-plugins.js'
 import { prependPath } from './plugin-toolchain.js'
+import { terminateProcessTree } from './process-control.js'
 import { mergeProfileUpdates, officialRuntimeUpdateVersion, parsePendingUpdates, partitionPackageUpdates, resolvePendingUpdatesPath, type ProfilePackageUpdate } from './profile-updates.js'
 import { copyPrebuiltOfficialRuntime } from './runtime-prebuilt.js'
 
@@ -51,6 +53,7 @@ interface SeedOptions {
   pnpmEntry?: string
   catalog?: readonly BundledPlugin[]
   runner?: (args: readonly string[]) => Promise<void>
+  timeoutMs?: number
 }
 
 export interface SeedResult {
@@ -89,6 +92,17 @@ export function shouldUsePackagedStore(targetDir: string): boolean {
   return !existsSync(join(targetDir, 'node_modules'))
 }
 
+export function resolvePnpmStoreDir(targetDir: string, fallback?: string): string | undefined {
+  try {
+    const modulesState = readFileSync(join(targetDir, 'node_modules', '.modules.yaml'), 'utf8')
+    const value = /^storeDir:\s*(.+?)\s*$/m.exec(modulesState)?.[1]?.replace(/^['"]|['"]$/g, '')
+    if (value) return value
+  } catch {
+    // 首次安装还没有 pnpm 状态文件。
+  }
+  return shouldUsePackagedStore(targetDir) && fallback ? fallback : undefined
+}
+
 export function buildSeedRemoveArgs(packageNames: readonly string[], targetDir: string, options: SeedPnpmOptions = {}): string[] {
   return [
     'remove',
@@ -125,7 +139,7 @@ export function ensureAutoInstallPeersEnabled(dir: string): void {
   const current = readFileSync(manifestPath, 'utf8')
   if (/\bautoInstallPeers:\s*true\b/.test(current)) return
   const next = current.includes('autoInstallPeers:')
-    ? current.replace(/autoInstallPeers:\s*false/g, 'autoInstallPeers: true')
+    ? current.replace(/autoInstallPeers:\s*['"]?false['"]?/g, 'autoInstallPeers: true')
     : `autoInstallPeers: true\n${current}`
   writeFileSync(manifestPath, next, 'utf8')
 }
@@ -137,7 +151,7 @@ export function ensureAutoInstallPeersDisabled(dir: string): void {
   const current = readFileSync(manifestPath, 'utf8')
   if (/\bautoInstallPeers:\s*false\b/.test(current)) return
   const next = current.includes('autoInstallPeers:')
-    ? current.replace(/autoInstallPeers:\s*true/g, 'autoInstallPeers: false')
+    ? current.replace(/autoInstallPeers:\s*['"]?true['"]?/g, 'autoInstallPeers: false')
     : `autoInstallPeers: false\n${current}`
   writeFileSync(manifestPath, next, 'utf8')
 }
@@ -205,14 +219,15 @@ export function writeOfficialRuntimeManifest(runtimeDir: string, version = OFFIC
       ...officialRuntimeDependencies(version),
     },
   }
-  writeFileSync(manifestPath, JSON.stringify(next, undefined, 2) + '\n', 'utf8')
+  writeTextFileAtomicSync(manifestPath, JSON.stringify(next, undefined, 2) + '\n')
 }
 
-export function officialRuntimeInstallArgs(runtimeDir: string): string[] {
+export function officialRuntimeInstallArgs(runtimeDir: string, storeDir?: string): string[] {
   return [
     'install',
     '--dir=' + runtimeDir,
     '--prod',
+    ...(storeDir === undefined ? [] : [`--store-dir=${storeDir}`]),
     '--config.node-linker=hoisted',
     '--config.auto-install-peers=true',
     '--config.minimumReleaseAge=0',
@@ -230,7 +245,7 @@ export async function applyOfficialRuntimeVersion(options: SeedOptions, version:
   }
   ensureAutoInstallPeersEnabled(runtimeDir)
   const runner = options.runner ?? ((pluginArgs) => runPnpm(options, pluginArgs))
-  await runner(officialRuntimeInstallArgs(runtimeDir))
+  await runner(officialRuntimeInstallArgs(runtimeDir, resolvePnpmStoreDir(runtimeDir, options.pluginStoreDir)))
   if (!isOfficialRuntimeLaunchable(runtimeDir)) {
     throw new Error('官方运行时升级到 ' + version + ' 后仍无法启动。')
   }
@@ -258,13 +273,16 @@ export async function stripOfficialProfileDependencies(profileDir: string): Prom
   })
   const officialModules = join(profileDir, 'node_modules', '@deepseek-ai')
   if (existsSync(officialModules)) {
-    await rm(officialModules, { recursive: true, force: true })
+    for (const entry of await readdir(officialModules, { withFileTypes: true })) {
+      if (!entry.isDirectory() && !entry.isSymbolicLink()) continue
+      await rm(join(officialModules, entry.name), { recursive: true, force: true })
+    }
     if (!removed.includes('@deepseek-ai')) removed.push('@deepseek-ai')
   }
   if (removed.length === 0 && nextBundles.join('\0') === (manifest.dsh?.profile?.bundles ?? []).join('\0')) return []
   manifest.dependencies = nextDependencies
   manifest.dsh = { ...manifest.dsh, profile: { ...manifest.dsh?.profile, bundles: nextBundles } }
-  await writeFile(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`, 'utf8')
+  await writeTextFileAtomic(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`)
   return removed
 }
 
@@ -286,7 +304,8 @@ export async function applyPendingProfileUpdates(options: SeedOptions): Promise<
   const applied: string[] = []
   const runner = options.runner ?? ((args) => runPnpm(options, args))
   if (updates.length > 0) {
-    await runner(buildSeedPluginArgs(updates, options.profileDir, {}))
+    const storeDir = resolvePnpmStoreDir(options.profileDir, options.pluginStoreDir)
+    await runner(buildSeedPluginArgs(updates, options.profileDir, storeDir === undefined ? {} : { storeDir }))
     applied.push(...updates.map((item) => item.packageName))
   }
   const officialVersion = officialRuntimeUpdateVersion(pending)
@@ -350,10 +369,11 @@ async function seedOfficialRuntime(options: SeedOptions): Promise<readonly strin
   }
   if (!existsSync(resolveProfileDshEntry(runtimeDir))) {
     await ensureRuntimeScaffold(runtimeDir)
-    const useStore = shouldUsePackagedStore(runtimeDir) && existsSync(options.pluginStoreDir)
+    const storeDir = resolvePnpmStoreDir(runtimeDir, existsSync(options.pluginStoreDir) ? options.pluginStoreDir : undefined)
+    const useStore = storeDir !== undefined
     const args = buildSeedPluginArgs([OFFICIAL_RUNTIME], runtimeDir, {
       autoInstallPeers: true,
-      ...(useStore ? { storeDir: options.pluginStoreDir, offline: true } : {}),
+      ...(useStore ? { storeDir, offline: true } : {}),
     })
     const runner = options.runner ?? ((pluginArgs) => runPnpm(options, pluginArgs))
     try {
@@ -376,10 +396,11 @@ async function ensureOfficialLaunchPeers(options: SeedOptions, targetDir: string
   ensureAutoInstallPeersEnabled(targetDir)
   const missing = missingOfficialLaunchPeers(targetDir)
   if (missing.length === 0) return []
-  const useStore = shouldUsePackagedStore(targetDir) && existsSync(options.pluginStoreDir)
+  const storeDir = resolvePnpmStoreDir(targetDir, existsSync(options.pluginStoreDir) ? options.pluginStoreDir : undefined)
+  const useStore = storeDir !== undefined
   const args = buildSeedPluginArgs([OFFICIAL_RUNTIME, ...missing], targetDir, {
     autoInstallPeers: true,
-    ...(useStore ? { storeDir: options.pluginStoreDir, offline: true } : {}),
+    ...(useStore ? { storeDir, offline: true } : {}),
   })
   const runner = options.runner ?? ((pluginArgs) => runPnpm(options, pluginArgs))
   try {
@@ -405,23 +426,24 @@ async function seedCommunityPlugins(options: SeedOptions): Promise<SeedResult> {
     storeExists: existsSync(options.pluginStoreDir),
   })
   if (plan.action === 'skip') return { seeded: [], skipped: plan.reason }
-  const useStore = shouldUsePackagedStore(options.profileDir) && existsSync(options.pluginStoreDir)
-  const storeOptions = useStore ? { storeDir: options.pluginStoreDir, offline: true } : {}
+  const storeDir = resolvePnpmStoreDir(options.profileDir, existsSync(options.pluginStoreDir) ? options.pluginStoreDir : undefined)
+  const useStore = storeDir !== undefined
+  const storeOptions = useStore ? { storeDir, offline: true } : {}
   const runner = options.runner ?? ((pluginArgs) => runPnpm(options, pluginArgs))
-  if (plan.action === 'replace-suite') {
-    try {
-      await runner(buildSeedRemoveArgs([SUITE_PACKAGE], options.profileDir, storeOptions))
-    } catch (error) {
-      if (useStore) await runner(buildSeedRemoveArgs([SUITE_PACKAGE], options.profileDir, {}))
-      else throw error
-    }
-  }
   if (plan.packages.length > 0) {
     const args = buildSeedPluginArgs(plan.packages, options.profileDir, storeOptions)
     try {
       await runner(args)
     } catch (error) {
       if (useStore) await runner(buildSeedPluginArgs(plan.packages, options.profileDir, {}))
+      else throw error
+    }
+  }
+  if (plan.action === 'replace-suite') {
+    try {
+      await runner(buildSeedRemoveArgs([SUITE_PACKAGE], options.profileDir, storeOptions))
+    } catch (error) {
+      if (useStore) await runner(buildSeedRemoveArgs([SUITE_PACKAGE], options.profileDir, {}))
       else throw error
     }
   }
@@ -433,12 +455,12 @@ export async function ensureProfileScaffold(profileDir: string): Promise<void> {
   await mkdir(profileDir, { recursive: true })
   const manifestPath = join(profileDir, 'package.json')
   if (!existsSync(manifestPath)) {
-    await writeFile(manifestPath, `${JSON.stringify({
+    await writeTextFileAtomic(manifestPath, `${JSON.stringify({
       name: 'dsh-profile-web',
       private: true,
       dependencies: {},
       dsh: { profile: { bundles: [...OFFICIAL_PROFILE_BUNDLES] } },
-    }, undefined, 2)}\n`, 'utf8')
+    }, undefined, 2)}\n`)
   }
   if (!existsSync(join(profileDir, 'cordis.patch.yml'))) {
     await writeFile(join(profileDir, 'cordis.patch.yml'), PROFILE_PATCH_TEMPLATE, 'utf8')
@@ -482,7 +504,7 @@ export async function reconcileProfileBundles(profileDir: string, packageNames?:
   }
   if (changed) {
     manifest.dsh = { ...manifest.dsh, profile: { ...manifest.dsh?.profile, bundles } }
-    await writeFile(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`, 'utf8')
+    await writeTextFileAtomic(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`)
   }
   return bundles
 }
@@ -502,7 +524,7 @@ export async function pruneMissingProfileBundles(profileDir: string, extraDirs: 
   const removed = current.filter((packageName) => !next.includes(packageName))
   if (removed.length === 0) return []
   manifest.dsh = { ...manifest.dsh, profile: { ...manifest.dsh?.profile, bundles: next } }
-  await writeFile(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`, 'utf8')
+  await writeTextFileAtomic(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`)
   return removed
 }
 
@@ -571,16 +593,37 @@ function runPnpm(options: SeedOptions, args: readonly string[]): Promise<void> {
       stdio: ['ignore', 'pipe', 'pipe'],
     })
     let output = ''
+    let settled = false
+    let timeoutError: Error | undefined
+    let killDeadline: ReturnType<typeof setTimeout> | undefined
+    const finish = (error?: Error): void => {
+      if (settled) return
+      settled = true
+      clearTimeout(timeout)
+      clearTimeout(killDeadline)
+      if (error === undefined) resolvePromise()
+      else reject(error)
+    }
+    const timeout = setTimeout(() => {
+      timeoutError = new Error('pnpm 操作超时，已终止子进程。')
+      terminateProcessTree(child)
+      killDeadline = setTimeout(() => finish(timeoutError), 2_000)
+    }, options.timeoutMs ?? 300_000)
+    timeout.unref?.()
     const collect = (chunk: Buffer): void => { output = (output + String(chunk)).slice(-8_000) }
     child.stdout?.on('data', collect)
     child.stderr?.on('data', collect)
-    child.once('error', () => { reject(new Error('无法启动随包 pnpm 补种命令。')) })
+    child.once('error', () => { finish(new Error('无法启动随包 pnpm 补种命令。')) })
     child.once('exit', code => {
-      if (code === 0) {
-        resolvePromise()
+      if (timeoutError !== undefined) {
+        finish(timeoutError)
         return
       }
-      reject(new Error(output.replace(/\s+/g, ' ').trim() || '内置插件补种失败。'))
+      if (code === 0) {
+        finish()
+        return
+      }
+      finish(new Error(output.replace(/\s+/g, ' ').trim() || '内置插件补种失败。'))
     })
   })
 }

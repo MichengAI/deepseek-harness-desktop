@@ -2,7 +2,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFi
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { extractTarGz } from './runtime-archive.js'
+import { extractTarGz, verifyFileSha256 } from './runtime-archive.js'
 
 function officialEntry(dir: string): string {
   return join(dir, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js')
@@ -20,7 +20,10 @@ export function extractPackagedRuntimes(resourcesDir: string, officialDest: stri
 
 function extractOnce(archivePath: string, destDir: string, readyPath: (dir: string) => string): boolean {
   const completeMarker = join(destDir, '.dsh-extract-complete')
-  if (!existsSync(archivePath) || existsSync(completeMarker)) return false
+  if (!existsSync(archivePath)) return false
+  if (existsSync(completeMarker) && existsSync(readyPath(destDir))) return false
+  rmSync(completeMarker, { force: true })
+  verifyFileSha256(archivePath)
   mkdirSync(dirname(destDir), { recursive: true })
   const stagingDir = mkdtempSync(join(dirname(destDir), `.${basename(destDir)}-`))
   try {

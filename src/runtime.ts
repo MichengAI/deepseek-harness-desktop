@@ -3,6 +3,7 @@ import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 import { isOfficialRuntimeLaunchable, resolveProfileDshEntry, resolveWebProfileDir } from './plugin-seed.js'
+import { verifyFileSha256 } from './runtime-archive.js'
 
 export interface DshRuntime {
   root: string
@@ -52,7 +53,10 @@ export function resolveDshRuntime(options: RuntimeResolutionOptions): DshRuntime
 export function resolveNodeExecutable(options: Pick<RuntimeResolutionOptions, 'isPackaged' | 'resourcesPath'>): string {
   const bundledNode = join(options.resourcesPath, 'node', process.platform === 'win32' ? 'node.exe' : 'node')
   if (options.isPackaged) {
-    if (existsSync(bundledNode)) return bundledNode
+    if (existsSync(bundledNode)) {
+      verifyFileSha256(bundledNode)
+      return bundledNode
+    }
     throw new Error(`未找到随包 Node：${bundledNode}`)
   }
 

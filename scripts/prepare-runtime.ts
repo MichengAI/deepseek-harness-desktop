@@ -6,7 +6,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { OFFICIAL_LAUNCH_PEERS, OFFICIAL_RUNTIME, officialRuntimePnpmConfig, pnpmWorkspaceYaml, STORE_PACKAGES } from '../src/bundled-plugins.js'
-import { packDirectoryToTarGz } from '../src/runtime-archive.js'
+import { extractTarGz, packDirectoryToTarGz, writeFileSha256 } from '../src/runtime-archive.js'
 
 const projectRoot = resolve(import.meta.dirname, '..', '..')
 const nodeRoot = join(projectRoot, 'runtime-node')
@@ -62,8 +62,9 @@ async function main(): Promise<void> {
   const nodeSha256 = createHash('sha256').update(await readFile(nodeExecutable)).digest('hex').toUpperCase()
   if (nodeSha256 !== expectedNodeSha256) throw new Error('随包 Node SHA256 不匹配：' + nodeSha256 + '。')
   await mkdir(nodeRoot, { recursive: true })
-  await cp(nodeExecutable, join(nodeRoot, process.platform === 'win32' ? 'node.exe' : 'node'))
-  await writeFile(join(nodeRoot, 'node.sha256'), nodeSha256 + '\n', 'utf8')
+  const stagedNodeExecutable = join(nodeRoot, process.platform === 'win32' ? 'node.exe' : 'node')
+  await cp(nodeExecutable, stagedNodeExecutable)
+  await writeFile(`${stagedNodeExecutable}.sha256`, nodeSha256 + '\n', 'utf8')
   await stagePnpm(nodeRoot)
   await stageBundledPlugins(pluginRoot, nodeRoot)
   const officialStore = join(officialRuntimeRoot, '.store')
@@ -71,6 +72,8 @@ async function main(): Promise<void> {
   await removePreparedPath(officialStore)
   packDirectoryToTarGz(join(pluginRoot, 'store'), join(pluginRoot, 'store.tgz'))
   packDirectoryToTarGz(officialRuntimeRoot, join(projectRoot, 'runtime-dsh.tgz'))
+  writeFileSha256(join(pluginRoot, 'store.tgz'))
+  writeFileSha256(join(projectRoot, 'runtime-dsh.tgz'))
   console.log(`已装配 Node 运行时：${nodeRoot}`)
   console.log(`已装配内置插件仓库：${join(pluginRoot, 'store.tgz')}`)
   console.log(`已装配预装官方运行时：${join(projectRoot, 'runtime-dsh.tgz')}`)
@@ -239,8 +242,11 @@ async function materializePnpmPackage(destinationRoot: string): Promise<string> 
     const packed = runCurrentPnpm(['pack', `pnpm@${bundledPnpmVersion}`, '--pack-destination', packDir])
     const archive = packed.stdout.split(/\r?\n/).map(line => line.trim()).find(line => line.endsWith('.tgz'))
     if (archive === undefined) throw new Error('下载随包 pnpm 失败。')
-    const extracted = spawnSync('tar', ['-xzf', join(packDir, archive), '-C', packDir], { encoding: 'utf8' })
-    if (extracted.status !== 0) throw new Error('解压随包 pnpm 失败。')
+    extractTarGz(join(packDir, archive), packDir)
+    const packedManifest = JSON.parse(await readFile(join(packDir, 'package', 'package.json'), 'utf8')) as { name?: unknown; version?: unknown }
+    if (packedManifest.name !== 'pnpm' || packedManifest.version !== bundledPnpmVersion) {
+      throw new Error('下载的 pnpm 包身份或版本不匹配。')
+    }
     await removePreparedPath(destination)
     await cp(join(packDir, 'package'), destination, { dereference: true, recursive: true })
     await removePreparedPath(packDir)

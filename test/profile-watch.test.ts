@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { EventEmitter } from 'node:events'
 import test from 'node:test'
 
 import { profileActivationFingerprint, shouldRecycleForProfileFingerprint, watchProfileActivation } from '../src/profile-watch.js'
@@ -63,5 +64,37 @@ test('profile 清单变化后会触发一次热重启', async () => {
   listener?.('change', 'package.json')
   await new Promise((resolve) => setTimeout(resolve, 50))
   assert.equal(fired.length, 1)
+  handle.stop()
+})
+
+test('清单先写、包后落盘时会重试指纹并触发热重启，watcher 错误不会成为未处理异常', async () => {
+  const installed = new Set<string>()
+  const emitter = new EventEmitter()
+  let listener: ((event: string, filename: string) => void) | undefined
+  let watchError: Error | undefined
+  const source = JSON.stringify({
+    dependencies: { 'late-plugin': '1.0.0' },
+    dsh: { profile: { bundles: ['late-plugin'] } },
+  })
+  const handle = watchProfileActivation('D:\\profile\\web', () => { installed.add('recycled') }, {
+    debounceMs: 10,
+    retryMs: 10,
+    maxRetries: 5,
+    isInstalled: name => installed.has(name),
+    read: () => source,
+    onError: error => { watchError = error },
+    watch: (_path, next) => {
+      listener = next
+      return Object.assign(emitter, { close: () => undefined })
+    },
+  })
+  listener?.('change', 'package.json')
+  await new Promise(resolve => setTimeout(resolve, 15))
+  installed.add('late-plugin')
+  await new Promise(resolve => setTimeout(resolve, 40))
+  assert.equal(installed.has('recycled'), true)
+  const expected = new Error('目录已删除')
+  emitter.emit('error', expected)
+  assert.equal(watchError, expected)
   handle.stop()
 })

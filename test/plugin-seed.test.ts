@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import test from 'node:test'
 
 import { OFFICIAL_DSH_VERSION, OFFICIAL_LAUNCH_PEERS, OFFICIAL_RUNTIME, SUITE_PACKAGE, officialDshVersionOverrides } from '../src/bundled-plugins.js'
-import { applyPendingProfileUpdates, buildSeedPluginArgs, ensureAutoInstallPeersEnabled, isOfficialRuntimeLaunchable, missingOfficialLaunchPeers, planBundledPluginSeed, finalizeProfileBundlesAfterInstall, pruneMissingProfileBundles, seedBundledPlugins, shouldUsePackagedStore, stripOfficialProfileDependencies, writeOfficialRuntimeManifest } from '../src/plugin-seed.js'
+import { applyPendingProfileUpdates, buildSeedPluginArgs, ensureAutoInstallPeersEnabled, isOfficialRuntimeLaunchable, missingOfficialLaunchPeers, planBundledPluginSeed, finalizeProfileBundlesAfterInstall, pruneMissingProfileBundles, resolvePnpmStoreDir, seedBundledPlugins, shouldUsePackagedStore, stripOfficialProfileDependencies, writeOfficialRuntimeManifest } from '../src/plugin-seed.js'
 
 const catalog = [
   { packageName: '@michengai/dsh-codex-ui', version: '0.2.58' },
@@ -126,6 +126,43 @@ test('已有 node_modules 时不得改用安装包 store', async () => {
   }
 })
 
+test('后续 pnpm 操作沿用 node_modules 记录的 store 目录', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-store-state-'))
+  try {
+    await mkdir(join(root, 'node_modules'))
+    await writeFile(join(root, 'node_modules', '.modules.yaml'), 'storeDir: D:\\persistent-store\n', 'utf8')
+    assert.equal(resolvePnpmStoreDir(root, 'D:\\fallback-store'), 'D:\\persistent-store')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('替换旧套件时先安装子插件，安装失败不会先卸载套件', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-suite-rollback-'))
+  try {
+    const store = join(root, 'store')
+    const profile = join(root, 'profile')
+    await mkdir(store)
+    await mkdir(profile)
+    await writeFile(join(profile, 'package.json'), JSON.stringify({ dependencies: { [SUITE_PACKAGE]: '1.0.0' } }), 'utf8')
+    const calls: string[][] = []
+    await assert.rejects(seedBundledPlugins({
+      nodeExecutable: 'node',
+      profileDir: profile,
+      pluginStoreDir: store,
+      catalog,
+      runner: async args => {
+        calls.push([...args])
+        if (args[0] === 'add') throw new Error('模拟安装失败')
+      },
+    }), /模拟安装失败/)
+    assert.equal(calls[0]?.[0], 'add')
+    assert.equal(calls.some(args => args[0] === 'remove'), false)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('官方运行时缺启动 peer 时判定为不可启动', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dsh-peer-'))
   try {
@@ -179,6 +216,9 @@ test('会把已有 workspace 的 autoInstallPeers 打开', async () => {
     await writeFile(join(root, 'pnpm-workspace.yaml'), "packages:`n  - .`nautoInstallPeers: false`n", 'utf8')
     ensureAutoInstallPeersEnabled(root)
     assert.match(await readFile(join(root, 'pnpm-workspace.yaml'), 'utf8'), /autoInstallPeers:\s*true/)
+    await writeFile(join(root, 'pnpm-workspace.yaml'), "packages:\n  - .\nautoInstallPeers: 'false'\n", 'utf8')
+    ensureAutoInstallPeersEnabled(root)
+    assert.doesNotMatch(await readFile(join(root, 'pnpm-workspace.yaml'), 'utf8'), /['"]false['"]/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -214,13 +254,15 @@ test('会清掉 Web profile 里的官方 node_modules，避免盖掉运行时', 
     const official = join(root, 'node_modules', '@deepseek-ai', 'dsh-client-ui-primitives')
     await mkdir(official, { recursive: true })
     await writeFile(join(official, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh-client-ui-primitives' }), 'utf8')
+    await writeFile(join(root, 'node_modules', '@deepseek-ai', '.keep'), 'keep', 'utf8')
     await writeFile(join(root, 'package.json'), JSON.stringify({
       dependencies: { '@michengai/dsh-codex-ui': '0.2.61' },
       dsh: { profile: { bundles: ['@deepseek-ai/dsh-base'] } },
     }), 'utf8')
     const removed = await stripOfficialProfileDependencies(root)
     assert.equal(removed.includes('@deepseek-ai'), true)
-    assert.equal(existsSync(join(root, 'node_modules', '@deepseek-ai')), false)
+    assert.equal(existsSync(official), false)
+    assert.equal(existsSync(join(root, 'node_modules', '@deepseek-ai', '.keep')), true)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -329,6 +371,28 @@ test('先认磁盘上的包，再更新 bundle 列表', async () => {
     assert.deepEqual(result.removed, ['dsh-file-upload'])
     assert.equal(result.bundles.includes('ready-plugin'), true)
     assert.equal(result.bundles.includes('dsh-file-upload'), false)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('启动补种 pnpm 超时后会终止并返回明确错误', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-seed-timeout-'))
+  try {
+    const store = join(root, 'store')
+    const profile = join(root, 'profile')
+    const pnpmEntry = join(root, 'hanging-pnpm.cjs')
+    await mkdir(store)
+    await mkdir(profile)
+    await writeFile(pnpmEntry, 'setInterval(() => undefined, 1000)\n', 'utf8')
+    await assert.rejects(seedBundledPlugins({
+      nodeExecutable: process.execPath,
+      profileDir: profile,
+      pluginStoreDir: store,
+      catalog: [catalog[0]],
+      pnpmEntry,
+      timeoutMs: 30,
+    }), /pnpm.*超时/i)
   } finally {
     await rm(root, { recursive: true, force: true })
   }

@@ -5,9 +5,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 
-import { APPLY_PLUGIN_UPDATES_IPC } from '../src/dsh-process.js'
-import { OFFICIAL_DSH_VERSION } from '../src/bundled-plugins.js'
-import { createDesktopHostServices, DESKTOP_BRIDGE_FILES, ensureDesktopBridgePatch, installDesktopBridge, mergeDesktopBridgePatch, officialPluginUpdateVersion, shouldRecycleAfterPluginArgs, shouldRecycleAfterPluginResult } from '../src/desktop-host.js'
+import { APPLY_PLUGIN_UPDATES_IPC, OFFICIAL_DSH_VERSION } from '../src/bundled-plugins.js'
+import { createDesktopHostServices, DESKTOP_BRIDGE_FILES, ensureDesktopBridgePatch, installDesktopBridge, mergeDesktopBridgePatch, officialPluginUpdateVersion, runBundledPnpm, shouldRecycleAfterPluginArgs, shouldRecycleAfterPluginResult } from '../src/desktop-host.js'
 
 test('市场安装和卸载后需要热更新 DSH', () => {
   assert.equal(shouldRecycleAfterPluginArgs(['add', 'foo@1.0.0']), true)
@@ -177,6 +176,20 @@ test('官方 peer 不会被单独安装进 Web profile', async () => {
   assert.match(stderr, /不能单独安装到 Web profile/)
 })
 
+test('同一命令混装官方包和社区包时明确拒绝，不静默漏装社区包', async () => {
+  const host = createDesktopHostServices({
+    profileName: 'web',
+    profileDir: 'D:\\profile\\web',
+    desktopRuntimeDir: 'D:\\runtime',
+    runner: () => { throw new Error('混合命令不应执行') },
+  })
+  const handle = host.desktopPnpm.runPlugin(['add', '@deepseek-ai/dsh@0.1.0-rc.8', 'community-plugin@1.0.0'], 'D:\\profile\\web')
+  let stderr = ''
+  handle.stderr.on('data', chunk => { stderr += chunk.toString('utf8') })
+  assert.deepEqual(await handle.done, { exitCode: 1, signal: null })
+  assert.match(stderr, /不能在同一条命令中混合/)
+})
+
 test('安装桌面桥接时缺少任一依赖都会立即失败', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dsh-bridge-files-'))
   const source = join(root, 'source')
@@ -216,6 +229,25 @@ test('后续成功安装不会激活上次失败留下的无关依赖', async ()
     assert.equal(manifest.dsh?.profile?.bundles?.includes('good-plugin'), true)
     assert.equal(manifest.dsh?.profile?.bundles?.includes('stale-plugin'), false)
   } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('市场 pnpm 超时后会结束子进程并返回超时退出码', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-host-timeout-'))
+  const previous = process.env.DSH_PNPM_ENTRY
+  try {
+    const pnpmEntry = join(root, 'hanging-pnpm.cjs')
+    await writeFile(pnpmEntry, 'setInterval(() => undefined, 1000)\n', 'utf8')
+    process.env.DSH_PNPM_ENTRY = pnpmEntry
+    const handle = runBundledPnpm([], root, undefined, 30)
+    let stderr = ''
+    handle.stderr.on('data', chunk => { stderr += chunk.toString('utf8') })
+    assert.deepEqual(await handle.done, { exitCode: 124, signal: null })
+    assert.match(stderr, /pnpm 操作超时/)
+  } finally {
+    if (previous === undefined) delete process.env.DSH_PNPM_ENTRY
+    else process.env.DSH_PNPM_ENTRY = previous
     await rm(root, { recursive: true, force: true })
   }
 })

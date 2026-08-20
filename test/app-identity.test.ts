@@ -33,3 +33,16 @@ test('安装目录不可写时才回退到用户数据目录', () => {
     join(userData, 'dsh-runtime'),
   )
 })
+
+test('macOS 打包态始终把可变运行时写到 userData，避免修改签名应用包', () => {
+  const userData = '/Users/demo/Library/Application Support/DSH Codex Desktop'
+  assert.equal(
+    resolveDesktopRuntimeDir(userData, {
+      isPackaged: true,
+      execPath: '/Applications/DSH Codex Desktop.app/Contents/MacOS/DSH Codex Desktop',
+      platform: 'darwin',
+      canWrite: () => true,
+    }),
+    join(userData, 'dsh-runtime'),
+  )
+})

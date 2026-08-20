@@ -2,13 +2,16 @@ import { spawn, type ChildProcess } from 'node:child_process'
 
 import { prependPath } from './plugin-toolchain.js'
 import { parseReadyUrl } from './readiness.js'
+import { APPLY_PLUGIN_UPDATES_IPC } from './bundled-plugins.js'
+import { terminateProcessTree } from './process-control.js'
 import type { DshRuntime } from './runtime.js'
 
-export const APPLY_PLUGIN_UPDATES_IPC = 'apply-plugin-updates'
+export { APPLY_PLUGIN_UPDATES_IPC }
 
 const startupTimeoutMs = 45_000
 const maxCapturedOutputLength = 12_000
 const shutdownTimeoutMs = 5_000
+const forcedShutdownDeadlineMs = 2_000
 
 export interface DshServer {
   stop: () => Promise<void>
@@ -130,31 +133,23 @@ function stopChild(child: ChildProcess): Promise<void> {
       if (settled) return
       settled = true
       clearTimeout(forceTimer)
+      clearTimeout(deadlineTimer)
       resolve()
     }
+    const deadlineTimer = setTimeout(finish, shutdownTimeoutMs + forcedShutdownDeadlineMs)
     const forceTimer = setTimeout(() => {
-      if (child.exitCode === null && child.signalCode === null) forceKillChild(child)
+      if (child.exitCode === null && child.signalCode === null) terminateProcessTree(child)
     }, shutdownTimeoutMs)
 
     child.once('exit', finish)
     if (child.connected && child.send !== undefined) {
       child.send('shutdown', error => {
-        if (error !== null) forceKillChild(child)
+        if (error !== null) terminateProcessTree(child)
       })
       return
     }
     child.kill('SIGTERM')
   })
-}
-
-function forceKillChild(child: ChildProcess): void {
-  if (child.exitCode !== null || child.signalCode !== null) return
-  if (process.platform === 'win32' && child.pid !== undefined) {
-    const killer = spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], { stdio: 'ignore', windowsHide: true })
-    killer.once('error', () => { child.kill('SIGKILL') })
-    return
-  }
-  child.kill('SIGKILL')
 }
 
 function formatEarlyExitMessage(code: number | null, capturedOutput: string): string {

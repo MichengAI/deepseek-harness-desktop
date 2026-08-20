@@ -13,9 +13,10 @@ export function resolveDesktopUserDataDir(appDataDir: string): string {
 export function resolveDesktopRuntimeDir(userDataDir: string, options: {
   isPackaged: boolean
   execPath: string
+  platform?: NodeJS.Platform
   canWrite?: (dir: string) => boolean
 }): string {
-  if (options.isPackaged) {
+  if (options.isPackaged && (options.platform ?? process.platform) !== 'darwin') {
     const installDir = dirname(options.execPath)
     const canWrite = options.canWrite ?? canWriteDirectory
     if (canWrite(installDir)) return join(installDir, 'dsh-runtime')

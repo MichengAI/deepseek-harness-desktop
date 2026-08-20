@@ -9,6 +9,7 @@ export interface BundledPlugin {
 
 /** 官方 DSH 家族统一锁死的版本。打包和在线升级都按这一个号对齐。 */
 export const OFFICIAL_DSH_VERSION = '0.1.0-rc.8'
+export const APPLY_PLUGIN_UPDATES_IPC = 'apply-plugin-updates'
 
 /** 官方 DSH 运行时。从 npm 安装，不依赖本地 deepseek-harness 源码。 */
 export const OFFICIAL_RUNTIME: BundledPlugin = {
@@ -75,22 +76,39 @@ export function officialRuntimeDependencies(version = OFFICIAL_DSH_VERSION): Rec
   ])
 }
 
-/** 比较官方预发布号：0.1.0-rc.8 > 0.1.0-rc.7，正式版大于同号 rc。 */
+/** 按 SemVer 比较正式版和 alpha/beta/rc 预发布号。 */
 export function compareReleaseVersions(left: string, right: string): number {
-  const parse = (value: string): { major: number; minor: number; patch: number; rc: number } | undefined => {
-    const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-rc\.(\d+))?/i.exec(value.trim())
+  const parse = (value: string): { major: number; minor: number; patch: number; prerelease?: string[] } | undefined => {
+    const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(value.trim())
     if (match === null) return undefined
     return {
       major: Number(match[1]),
       minor: Number(match[2]),
       patch: Number(match[3]),
-      rc: match[4] === undefined ? Number.POSITIVE_INFINITY : Number(match[4]),
+      ...(match[4] === undefined ? {} : { prerelease: match[4].split('.') }),
     }
   }
   const a = parse(left)
   const b = parse(right)
   if (a === undefined || b === undefined) return left.localeCompare(right)
-  return a.major - b.major || a.minor - b.minor || a.patch - b.patch || a.rc - b.rc
+  const core = a.major - b.major || a.minor - b.minor || a.patch - b.patch
+  if (core !== 0) return core
+  if (a.prerelease === undefined) return b.prerelease === undefined ? 0 : 1
+  if (b.prerelease === undefined) return -1
+  for (let index = 0; index < Math.max(a.prerelease.length, b.prerelease.length); index += 1) {
+    const leftPart = a.prerelease[index]
+    const rightPart = b.prerelease[index]
+    if (leftPart === undefined) return -1
+    if (rightPart === undefined) return 1
+    if (leftPart === rightPart) continue
+    const leftNumber = /^\d+$/.test(leftPart) ? Number(leftPart) : undefined
+    const rightNumber = /^\d+$/.test(rightPart) ? Number(rightPart) : undefined
+    if (leftNumber !== undefined && rightNumber !== undefined) return leftNumber - rightNumber
+    if (leftNumber !== undefined) return -1
+    if (rightNumber !== undefined) return 1
+    return leftPart.localeCompare(rightPart)
+  }
+  return 0
 }
 
 export function planOfficialRuntimeTarget(input: {

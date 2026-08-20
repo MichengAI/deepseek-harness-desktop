@@ -5,7 +5,8 @@ import { join } from 'node:path'
 import test from 'node:test'
 
 import { OFFICIAL_LAUNCH_PEERS } from '../src/bundled-plugins.js'
-import { resolveDshRuntime } from '../src/runtime.js'
+import { resolveDshRuntime, resolveNodeExecutable } from '../src/runtime.js'
+import { writeFileSha256 } from '../src/runtime-archive.js'
 
 async function writeOfficialEntry(dir: string): Promise<void> {
   await mkdir(join(dir, 'node_modules', '@deepseek-ai', 'dsh', 'lib'), { recursive: true })
@@ -58,6 +59,22 @@ test('桌面运行时可用时不使用 profile 里的官方包', async () => {
       desktopRuntimeDir: desktop,
     })
     assert.equal(runtime.root, desktop)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('打包态启动前校验随包 Node 的 SHA256', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-node-hash-'))
+  try {
+    const nodeDir = join(root, 'node')
+    const executable = join(nodeDir, process.platform === 'win32' ? 'node.exe' : 'node')
+    await mkdir(nodeDir)
+    await writeFile(executable, 'node', 'utf8')
+    writeFileSha256(executable)
+    assert.equal(resolveNodeExecutable({ isPackaged: true, resourcesPath: root }), executable)
+    await writeFile(executable, 'tampered', 'utf8')
+    assert.throws(() => resolveNodeExecutable({ isPackaged: true, resourcesPath: root }), /SHA256/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }

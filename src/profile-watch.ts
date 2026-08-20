@@ -25,9 +25,12 @@ export function shouldRecycleForProfileFingerprint(previous: string, next: strin
 
 interface ProfileWatchOptions {
   debounceMs?: number
-  watch?: (path: string, listener: (event: string, filename: string | Buffer | null) => void) => { close: () => void }
+  retryMs?: number
+  maxRetries?: number
+  watch?: (path: string, listener: (event: string, filename: string | Buffer | null) => void) => { close: () => void; on?: (event: 'error', listener: (error: Error) => void) => unknown }
   read?: (path: string) => string
   isInstalled?: (packageName: string) => boolean
+  onError?: (error: Error) => void
 }
 
 /** 只有插件真正落到磁盘，才视为安装成功并热重启 DSH。 */
@@ -39,23 +42,34 @@ export function watchProfileActivation(
   const manifestPath = join(profileDir, 'package.json')
   const read = options.read ?? ((path: string) => readFileSync(path, 'utf8'))
   const debounceMs = options.debounceMs ?? 800
+  const retryMs = options.retryMs ?? 250
+  const maxRetries = options.maxRetries ?? 20
   const isInstalled = options.isInstalled ?? ((packageName: string) => existsSync(join(profileDir, 'node_modules', ...packageName.split('/'), 'package.json')))
   let current = readFingerprint()
   let timer: ReturnType<typeof setTimeout> | undefined
+  let retries = 0
+  const check = (): void => {
+    const next = readFingerprint()
+    if (shouldRecycleForProfileFingerprint(current, next)) {
+      current = next
+      retries = 0
+      onChange()
+      return
+    }
+    if (next !== '') current = next
+    if (retries >= maxRetries) return
+    retries += 1
+    timer = setTimeout(check, retryMs)
+  }
   const watcher = (options.watch ?? watch)(profileDir, (_event, filename) => {
     const name = typeof filename === 'string' ? filename : filename?.toString()
-    if (name !== undefined && name !== 'package.json') return
+    if (name !== undefined && name !== 'package.json' && name !== 'node_modules') return
     clearTimeout(timer)
-    timer = setTimeout(() => {
-      const next = readFingerprint()
-      if (shouldRecycleForProfileFingerprint(current, next)) {
-        current = next
-        onChange()
-        return
-      }
-      current = next
-    }, debounceMs)
+    retries = 0
+    timer = setTimeout(check, debounceMs)
   })
+  ;(watcher as { on?: (event: 'error', listener: (error: Error) => void) => unknown })
+    .on?.('error', error => { options.onError?.(error) })
 
   function readFingerprint(): string {
     try {
@@ -71,7 +85,8 @@ export function watchProfileActivation(
       watcher.close()
     },
     sync: () => {
-      current = readFingerprint()
+      const next = readFingerprint()
+      if (next !== '') current = next
     },
   }
 }

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 
-import { extractTarGz, packDirectoryToTarGz } from '../src/runtime-archive.js'
+import { extractTarGz, packDirectoryToTarGz, validateArchiveEntries } from '../src/runtime-archive.js'
 
 test('目录可以打成 tar.gz 再解回原结构', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dsh-archive-'))
@@ -20,4 +20,11 @@ test('目录可以打成 tar.gz 再解回原结构', async () => {
   } finally {
     await rm(root, { recursive: true, force: true })
   }
+})
+
+test('解压前拒绝绝对路径和目录穿越条目', () => {
+  assert.doesNotThrow(() => validateArchiveEntries(['./nested/ok.txt']))
+  assert.throws(() => validateArchiveEntries(['../escape.txt']), /不安全/)
+  assert.throws(() => validateArchiveEntries(['/absolute.txt']), /不安全/)
+  assert.throws(() => validateArchiveEntries(['C:\\absolute.txt']), /不安全/)
 })

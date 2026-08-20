@@ -16,3 +16,12 @@ export function isExternalHttpUrl(value: string, allowedOrigin: string): boolean
     return false
   }
 }
+
+export function isExternalOpenUrl(value: string, allowedOrigin: string): boolean {
+  try {
+    const url = new URL(value)
+    return isExternalHttpUrl(value, allowedOrigin) || url.protocol === 'mailto:' || url.protocol === 'tel:'
+  } catch {
+    return false
+  }
+}

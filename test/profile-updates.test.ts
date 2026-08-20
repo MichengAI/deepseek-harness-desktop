@@ -35,3 +35,19 @@ test('已落地的版本不会重复安装', () => {
   })
   assert.deepEqual(updates, [{ packageName: '@michengai/dsh-codex-ui', version: '0.2.60' }])
 })
+
+test('待更新清单拒绝非法包名和非精确版本', () => {
+  const updates = parsePendingUpdates(JSON.stringify({
+    packages: [
+      { packageName: 'safe-plugin', version: '1.2.3' },
+      { packageName: '@scope/safe-plugin', version: '1.2.3-rc.1' },
+      { packageName: 'bad plugin', version: '1.0.0' },
+      { packageName: 'safe-plugin', version: 'latest' },
+      { packageName: 'safe-plugin', version: 'file:..\\payload' },
+    ],
+  }))
+  assert.deepEqual(updates, [
+    { packageName: 'safe-plugin', version: '1.2.3' },
+    { packageName: '@scope/safe-plugin', version: '1.2.3-rc.1' },
+  ])
+})

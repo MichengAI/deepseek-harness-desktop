@@ -49,6 +49,8 @@ test('官方 DSH 家族锁在同一个精确版本', () => {
 
 test('官方版本比较和升级目标不会把已对齐的新版本降回去', () => {
   assert.equal(compareReleaseVersions('0.1.0-rc.8', '0.1.0-rc.7') > 0, true)
+  assert.equal(compareReleaseVersions('1.0.0-beta.1', '1.0.0-alpha.9') > 0, true)
+  assert.equal(compareReleaseVersions('1.0.0', '1.0.0-beta.9') > 0, true)
   assert.equal(planOfficialRuntimeTarget({
     installed: '0.1.0-rc.7',
     aligned: false,

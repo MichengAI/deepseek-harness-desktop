@@ -9,8 +9,8 @@ import { resolveAppIconPath, resolveRasterIconPath, TRAY_ICON_SIZE } from './app
 import { WINDOW_ICON_PIXEL_SIZES, isLoopbackFaviconRequest } from './window-icon.js'
 import { quitDesktopApp, shouldHideInsteadOfClose } from './app-lifecycle.js'
 import type { DshServer, StartDshOptions } from './dsh-process.js'
-import { isExternalHttpUrl, isSameOrigin } from './navigation.js'
-import { applyPendingProfileUpdates, seedBundledPlugins, resolveWebProfileDir } from './plugin-seed.js'
+import { isExternalOpenUrl, isSameOrigin } from './navigation.js'
+import { applyPendingProfileUpdates, resolvePnpmStoreDir, seedBundledPlugins, resolveWebProfileDir } from './plugin-seed.js'
 import { parseUnresolvedBundleError, removeProfileBundle, startWithProfileSelfRepair } from './profile-repair.js'
 import { resolveBundledPluginStore, resolvePluginBinDir } from './plugin-toolchain.js'
 import { resolveDshBootstrap, resolveDshRuntime, resolveNodeExecutable } from './runtime.js'
@@ -42,6 +42,10 @@ let lastSeedOptions: Parameters<typeof applyPendingProfileUpdates>[0] | undefine
 let profileWatcher: { stop: () => void; sync: () => void } | undefined
 let updateStatus: DesktopUpdateStatus = { kind: 'idle' }
 const { autoUpdater } = updater
+let isReportingUnexpectedError = false
+
+process.on('uncaughtException', handleUnexpectedMainError)
+process.on('unhandledRejection', handleUnexpectedMainError)
 
 app.setName(DESKTOP_APP_NAME)
 app.setAppUserModelId(DESKTOP_APP_USER_MODEL_ID)
@@ -58,13 +62,17 @@ if (!app.requestSingleInstanceLock()) {
   app.on('before-quit', event => {
     if (isQuitting) return
     event.preventDefault()
-    void requestQuit()
+    runMainTask(requestQuit())
   })
 
-  void startApplication()
+  runMainTask(startApplication())
 }
 
 async function requestQuit(): Promise<void> {
+  await shutdownDesktop(() => app.exit())
+}
+
+async function shutdownDesktop(exit: () => void): Promise<void> {
   await quitDesktopApp({
     isQuitting,
     markQuitting: () => { isQuitting = true },
@@ -79,7 +87,7 @@ async function requestQuit(): Promise<void> {
       server = undefined
       await current?.stop()
     },
-    exit: () => app.exit(),
+    exit,
   })
 }
 
@@ -112,23 +120,23 @@ async function startApplication(): Promise<void> {
       ...runtimeOptions,
       ...(extractedStoreDir === undefined ? {} : { extractedStoreDir }),
     })
+    const profileStoreDir = resolvePnpmStoreDir(profileDir, pluginStoreDir)
     const prebuiltRuntimeDir = resolvePrebuiltOfficialRuntime(runtimeOptions)
+    const nodeExecutable = resolveNodeExecutable(runtimeOptions)
     const seedOptions = {
-      nodeExecutable: resolveNodeExecutable(runtimeOptions),
+      nodeExecutable,
       profileDir,
       desktopRuntimeDir,
       pluginStoreDir: pluginStoreDir ?? '',
       ...(prebuiltRuntimeDir === undefined ? {} : { prebuiltRuntimeDir }),
       ...(pathPrefix === undefined ? {} : { pathPrefix }),
     }
-    if (pluginStoreDir !== undefined) {
-      try {
-        const seeded = await seedBundledPlugins(seedOptions)
-        if (seeded.seeded.length > 0) console.log(`已补种官方运行时和社区插件：${seeded.seeded.join('、')}`)
-      } catch (error) {
-        const message = error instanceof Error ? error.message : '内置插件补种失败。'
-        await writeTextFile(join(app.getPath('userData'), 'plugin-seed.log'), `${message}\n`, 'utf8').catch(() => undefined)
-      }
+    try {
+      const seeded = await seedBundledPlugins(seedOptions)
+      if (seeded.seeded.length > 0) console.log(`已补种官方运行时和社区插件：${seeded.seeded.join('、')}`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '内置插件补种失败。'
+      await writeTextFile(join(app.getPath('userData'), 'plugin-seed.log'), `${message}\n`, 'utf8').catch(() => undefined)
     }
     try {
       const updated = await applyPendingProfileUpdates(seedOptions)
@@ -145,13 +153,14 @@ async function startApplication(): Promise<void> {
       bootstrapPath: resolveDshBootstrap(runtimeOptions),
       ...(pathPrefix === undefined ? {} : { pathPrefix }),
       runtime,
-      nodeExecutable: resolveNodeExecutable(runtimeOptions),
+      nodeExecutable,
       environment: {
         DSH_HOME: resolve(profileDir, '..', '..'),
         DSH_PROFILE_DIR: profileDir,
         DSH_PROFILE_NAME: 'web',
         DSH_RUNTIME_DIR: desktopRuntimeDir,
         ...(pnpmEntry === undefined ? {} : { DSH_PNPM_ENTRY: pnpmEntry }),
+        ...(profileStoreDir === undefined ? {} : { DSH_PNPM_STORE_DIR: profileStoreDir }),
       },
     }
     lastStartOptions = startOptions
@@ -169,8 +178,8 @@ async function startApplication(): Promise<void> {
     profileWatcher?.stop()
     profileWatcher = watchProfileActivation(profileDir, () => {
       if (isQuitting || isRecycling) return
-      void recycleDshForPluginUpdate()
-    })
+      runMainTask(recycleDshForPluginUpdate())
+    }, { onError: handleUnexpectedMainError })
     createMainWindow(server.url)
   } catch (error) {
     await reportStartupFailure(error)
@@ -247,7 +256,7 @@ let allowedOrigin = ''
 function createMainWindow(serverUrl: string): void {
   allowedOrigin = new URL(serverUrl).origin
   mainWindow ??= createWindow()
-  void mainWindow.loadURL(serverUrl)
+  runMainTask(mainWindow.loadURL(serverUrl))
 }
 
 async function reportStartupFailure(error: unknown): Promise<void> {
@@ -258,10 +267,23 @@ async function reportStartupFailure(error: unknown): Promise<void> {
   await showStartupWindow('启动失败：' + short + '\n日志：' + logPath)
 }
 
+function handleUnexpectedMainError(error: unknown): void {
+  console.error('主进程发生未处理异常。', error)
+  if (!app.isReady() || isQuitting || isReportingUnexpectedError) return
+  isReportingUnexpectedError = true
+  void reportStartupFailure(error)
+    .catch(reportError => { console.error('主进程异常报告失败。', reportError) })
+    .finally(() => { isReportingUnexpectedError = false })
+}
+
+function runMainTask(task: Promise<unknown>): void {
+  void task.catch(handleUnexpectedMainError)
+}
+
 
 function handleDshIpc(message: unknown): void {
   if (!isApplyPluginUpdatesIpc(message)) return
-  void recycleDshForPluginUpdate()
+  runMainTask(recycleDshForPluginUpdate())
 }
 
 async function recycleDshForPluginUpdate(): Promise<void> {
@@ -300,13 +322,13 @@ function handleUnexpectedDshExit(message: string): void {
   server = undefined
   const missing = parseUnresolvedBundleError(message)
   if (missing !== undefined && lastSeedOptions !== undefined) {
-    void removeProfileBundle(lastSeedOptions.profileDir, missing).then((removed) => {
-      if (removed) void recycleDshForPluginUpdate()
-    })
+    runMainTask(removeProfileBundle(lastSeedOptions.profileDir, missing).then((removed) => {
+      if (removed) runMainTask(recycleDshForPluginUpdate())
+    }))
     return
   }
   void writeTextFile(join(app.getPath('userData'), 'startup-error.log'), `${message}\n`, 'utf8').catch(() => undefined)
-  void showStartupWindow('DSH 已停止运行。请重新启动应用。')
+  runMainTask(showStartupWindow('DSH 已停止运行。请重新启动应用。'))
 }
 
 function resolveWindowIconPath(): string | undefined {
@@ -333,18 +355,18 @@ function createWindow(): BrowserWindow {
     },
   })
   window.webContents.setWindowOpenHandler(({ url }) => {
-    if (isExternalHttpUrl(url, allowedOrigin)) void shell.openExternal(url)
+    if (isExternalOpenUrl(url, allowedOrigin)) runMainTask(shell.openExternal(url))
     return { action: 'deny' }
   })
   window.webContents.on('will-navigate', (event, url) => {
     if (isSameOrigin(url, allowedOrigin)) return
     event.preventDefault()
-    if (isExternalHttpUrl(url, allowedOrigin)) void shell.openExternal(url)
+    if (isExternalOpenUrl(url, allowedOrigin)) runMainTask(shell.openExternal(url))
   })
   window.webContents.on('will-redirect', (event, url) => {
     if (isSameOrigin(url, allowedOrigin)) return
     event.preventDefault()
-    if (isExternalHttpUrl(url, allowedOrigin)) void shell.openExternal(url)
+    if (isExternalOpenUrl(url, allowedOrigin)) runMainTask(shell.openExternal(url))
   })
   applyInitialWindowState(window)
   window.on('close', event => {
@@ -359,6 +381,7 @@ function createWindow(): BrowserWindow {
 }
 
 function configureDesktopUpdater(): void {
+  autoUpdater.logger = console
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = false
   const channel = desktopUpdateChannel()
@@ -416,7 +439,7 @@ function refreshTrayMenu(): void {
     return {
       label: item.label,
       enabled: item.enabled,
-      click: () => { void handleTrayUpdateAction(item.id) },
+      click: () => { runMainTask(handleTrayUpdateAction(item.id)) },
     }
   })))
 }
@@ -526,24 +549,7 @@ async function downloadDesktopUpdate(): Promise<void> {
 }
 
 async function installDesktopUpdate(): Promise<void> {
-  await quitDesktopApp({
-    isQuitting,
-    markQuitting: () => { isQuitting = true },
-    destroyTray: () => {
-      tray?.destroy()
-      tray = undefined
-      profileWatcher?.stop()
-      profileWatcher = undefined
-    },
-    stopServer: async () => {
-      const current = server
-      server = undefined
-      await current?.stop()
-    },
-    exit: () => {
-      autoUpdater.quitAndInstall(false, true)
-    },
-  })
+  await shutdownDesktop(() => { autoUpdater.quitAndInstall(false, true) })
 }
 
 function releaseNotesText(notes: string | Array<{ note?: string | null }> | null | undefined): string | undefined {

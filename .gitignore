@@ -12,6 +12,7 @@ coverage/
 
 runtime-dsh/
 runtime-dsh.tgz
+runtime-dsh.tgz.sha256
 .codegraph/
 _tmp*
 System.Management.Automation.Internal.Host.InternalHost

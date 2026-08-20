@@ -22,13 +22,14 @@ interface PluginBinOptions {
 export function prependPath(existing: string | undefined, prefix: string, platform = process.platform): string {
   const separator = platform === 'win32' ? ';' : ':'
   const parts = (existing ?? '').split(separator).filter(part => part !== '')
-  return [prefix, ...parts.filter(part => part !== prefix)].join(separator)
+  const normalizedPrefix = platform === 'win32' ? prefix.toLowerCase() : prefix
+  return [prefix, ...parts.filter(part => (platform === 'win32' ? part.toLowerCase() : part) !== normalizedPrefix)].join(separator)
 }
 
 /** 打包态使用 extraResources 中的离线仓库；开发态仅在本地装配目录存在时启用。 */
 export function resolveBundledPluginStore(options: PluginStoreOptions): string | undefined {
   const exists = options.exists ?? existsSync
-  const envStore = options.envStore ?? process.env.DSH_BUNDLED_PLUGIN_STORE
+  const envStore = options.envStore !== undefined ? options.envStore : process.env.DSH_BUNDLED_PLUGIN_STORE
   const candidates = [
     envStore,
     options.extractedStoreDir,

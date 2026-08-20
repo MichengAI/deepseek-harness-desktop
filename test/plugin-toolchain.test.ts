@@ -7,6 +7,7 @@ import { prependPath, resolveBundledPluginStore, resolvePluginBinDir } from '../
 test('把随包 Node 目录插到 PATH 最前，供 dsh plugin 和 code-ui 找到 pnpm', () => {
   const merged = prependPath('C:\\Windows\\System32', 'D:\\app\\resources\\node', 'win32')
   assert.equal(merged, 'D:\\app\\resources\\node;C:\\Windows\\System32')
+  assert.equal(prependPath('d:\\APP\\resources\\NODE;C:\\Windows', 'D:\\app\\resources\\node', 'win32'), 'D:\\app\\resources\\node;C:\\Windows')
 })
 
 test('打包态优先使用安装目录里解压后的离线仓库', () => {
@@ -38,6 +39,23 @@ test('开发态只在本地装配目录存在时启用补种', () => {
     exists: () => false,
   })
   assert.equal(missing, undefined)
+})
+
+test('显式空 envStore 不会被进程环境变量重新覆盖', () => {
+  const previous = process.env.DSH_BUNDLED_PLUGIN_STORE
+  process.env.DSH_BUNDLED_PLUGIN_STORE = 'D:\\unexpected-store'
+  try {
+    assert.equal(resolveBundledPluginStore({
+      isPackaged: false,
+      resourcesPath: 'D:\\app\\resources',
+      appPath: 'D:\\repo',
+      envStore: '',
+      exists: path => path === 'D:\\unexpected-store',
+    }), undefined)
+  } finally {
+    if (previous === undefined) delete process.env.DSH_BUNDLED_PLUGIN_STORE
+    else process.env.DSH_BUNDLED_PLUGIN_STORE = previous
+  }
 })
 
 test('打包态的 pnpm 与 Node 放在同一目录', () => {

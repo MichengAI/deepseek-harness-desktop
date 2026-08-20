@@ -1,10 +1,9 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { PassThrough } from 'node:stream'
 
-import { OFFICIAL_DSH_VERSION, isDeepSeekOfficialPackage, isOfficialDshPackage } from './bundled-plugins.js'
+import { APPLY_PLUGIN_UPDATES_IPC, OFFICIAL_DSH_VERSION, isDeepSeekOfficialPackage, isOfficialDshPackage } from './bundled-plugins.js'
 import { finalizeProfileBundlesAfterInstall, officialRuntimeInstallArgs, writeOfficialRuntimeManifest } from './plugin-seed.js'
-
-const APPLY_PLUGIN_UPDATES_IPC = 'apply-plugin-updates'
+import { terminateProcessTree } from './process-control.js'
 
 export const DESKTOP_BRIDGE_PACKAGE = 'dsh-desktop-bridge'
 
@@ -85,6 +84,11 @@ export function shouldRecycleAfterPluginResult(
 
 export function createDesktopHostServices(options: DesktopHostOptions) {
   const runPlugin = (args: readonly string[], invokingDir: string, signal?: AbortSignal): DesktopPnpmHandle => {
+    const officialSpecs = officialPluginCommandSpecs(args)
+    const communitySpecs = pluginCommandPackageNames(args).filter(name => !isDeepSeekOfficialPackage(name))
+    if (officialSpecs.length > 0 && communitySpecs.length > 0) {
+      return completedPnpmHandle(1, '不能在同一条命令中混合安装官方包和社区包，请分别操作。\n')
+    }
     const officialVersion = officialPluginUpdateVersion(args)
     if (officialVersion !== undefined && options.desktopRuntimeDir !== undefined) {
       writeOfficialRuntimeManifest(options.desktopRuntimeDir, officialVersion)
@@ -98,7 +102,7 @@ export function createDesktopHostServices(options: DesktopHostOptions) {
       }).catch(error => { console.error('官方运行时更新后处理失败。', error) })
       return handle
     }
-    if (officialPluginCommandSpecs(args).length > 0) {
+    if (officialSpecs.length > 0) {
       const message = pluginCommandAction(args) === 'remove'
         ? '官方运行时由桌面端统一管理，不能从插件市场卸载。\n'
         : '官方依赖随桌面运行时统一更新，不能单独安装到 Web profile。\n'
@@ -142,14 +146,16 @@ export function createDesktopHostServices(options: DesktopHostOptions) {
     },
   }
 }
-function runBundledPnpm(args: readonly string[], cwd: string, signal?: AbortSignal): DesktopPnpmHandle {
+export function runBundledPnpm(args: readonly string[], cwd: string, signal?: AbortSignal, timeoutMs = 300_000): DesktopPnpmHandle {
   const pnpmEntry = process.env.DSH_PNPM_ENTRY ?? process.env.npm_execpath
   if (pnpmEntry === undefined || !existsSync(pnpmEntry)) {
     return completedPnpmHandle(127, '未找到 pnpm 入口，无法执行插件操作。\n')
   }
   const stdout = new PassThrough()
   const stderr = new PassThrough()
-  const child: ChildProcess = spawn(process.execPath, [pnpmEntry, ...args], {
+  const storeDir = process.env.DSH_PNPM_STORE_DIR
+  const effectiveArgs = storeDir === undefined || args.some(arg => arg === '--store-dir' || arg.startsWith('--store-dir=')) ? args : [...args, `--store-dir=${storeDir}`]
+  const child: ChildProcess = spawn(process.execPath, [pnpmEntry, ...effectiveArgs], {
     cwd,
     env: process.env,
     windowsHide: true,
@@ -158,20 +164,34 @@ function runBundledPnpm(args: readonly string[], cwd: string, signal?: AbortSign
   child.stdout?.pipe(stdout)
   child.stderr?.pipe(stderr)
   const done = new Promise<{ exitCode: number | null; signal: NodeJS.Signals | null }>((resolvePromise) => {
+    let settled = false
+    let timedOut = false
+    let killDeadline: ReturnType<typeof setTimeout> | undefined
     const finish = (exitCode: number | null, exitSignal: NodeJS.Signals | null): void => {
+      if (settled) return
+      settled = true
+      clearTimeout(timeout)
+      clearTimeout(killDeadline)
       stdout.end()
       stderr.end()
       resolvePromise({ exitCode, signal: exitSignal })
     }
+    const timeout = setTimeout(() => {
+      timedOut = true
+      stderr.write('pnpm 操作超时，已终止子进程。\n')
+      terminateProcessTree(child)
+      killDeadline = setTimeout(() => finish(124, null), 2_000)
+    }, timeoutMs)
+    timeout.unref?.()
     child.once('error', () => finish(127, null))
-    child.once('exit', (code, exitSignal) => finish(code, exitSignal))
-    signal?.addEventListener('abort', () => cancelChild(child), { once: true })
+    child.once('exit', (code, exitSignal) => timedOut ? finish(124, null) : finish(code, exitSignal))
+    signal?.addEventListener('abort', () => terminateProcessTree(child), { once: true })
   })
   return {
     stdout,
     stderr,
     done,
-    cancel: () => { cancelChild(child) },
+    cancel: () => { terminateProcessTree(child) },
   }
 }
 
@@ -190,25 +210,19 @@ function completedPnpmHandle(exitCode: number, message = ''): DesktopPnpmHandle 
   }
 }
 
-function cancelChild(child: ChildProcess): void {
-  if (child.exitCode !== null || child.killed) return
-  if (process.platform === 'win32' && child.pid !== undefined) {
-    spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], { stdio: 'ignore', windowsHide: true })
-    return
-  }
-  child.kill('SIGKILL')
-}
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 export const DESKTOP_BRIDGE_FILES = [
   'desktop-bridge.mjs',
+  'atomic-file.js',
   'desktop-host.js',
   'bundled-plugins.js',
   'dsh-process.js',
   'plugin-seed.js',
   'plugin-toolchain.js',
   'profile-updates.js',
+  'process-control.js',
   'readiness.js',
   'runtime-archive.js',
   'runtime-prebuilt.js',

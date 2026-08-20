@@ -1,7 +1,8 @@
 import { existsSync } from 'node:fs'
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
+import { writeTextFileAtomic } from './atomic-file.js'
 import { OFFICIAL_PROFILE_BUNDLES } from './bundled-plugins.js'
 import { ensureDesktopBridgePatch } from './desktop-host.js'
 import {
@@ -35,7 +36,7 @@ export async function removeProfileBundle(profileDir: string, packageName: strin
     manifest.dependencies = dependencies
   }
   manifest.dsh = { ...manifest.dsh, profile: { ...manifest.dsh?.profile, bundles: next } }
-  await writeFile(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`, 'utf8')
+  await writeTextFileAtomic(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`)
   return true
 }
 

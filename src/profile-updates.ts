@@ -9,6 +9,9 @@ export interface ProfilePackageUpdate {
   version: string
 }
 
+const PACKAGE_NAME_PATTERN = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/i
+const EXACT_VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/
+
 /** 关于页和桌面端共用的待更新清单文件名。 */
 export function resolvePendingUpdatesPath(profileDir: string): string {
   return join(profileDir, PROFILE_PENDING_UPDATES_FILE)
@@ -21,6 +24,7 @@ export function parsePendingUpdates(raw: string): ProfilePackageUpdate[] {
     if (item === null || typeof item !== 'object') return []
     const record = item as { packageName?: unknown; version?: unknown }
     if (typeof record.packageName !== 'string' || typeof record.version !== 'string') return []
+    if (record.packageName.length > 214 || !PACKAGE_NAME_PATTERN.test(record.packageName) || !EXACT_VERSION_PATTERN.test(record.version)) return []
     return [{ packageName: record.packageName, version: record.version }]
   })
 }
