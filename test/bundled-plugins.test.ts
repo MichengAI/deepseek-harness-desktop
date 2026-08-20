@@ -3,7 +3,7 @@ import test from 'node:test'
 
 import { BUNDLED_PLUGINS, OFFICIAL_DSH_VERSION, OFFICIAL_LAUNCH_PEERS, OFFICIAL_RUNTIME, compareReleaseVersions, officialDshVersionOverrides, officialRuntimeDependencies, officialRuntimePnpmConfig, planOfficialRuntimeTarget, pnpmAllowBuildsManifest, pnpmWorkspaceYaml, SUITE_PACKAGE, bundledPluginNames, seededPackageNames } from '../src/bundled-plugins.js'
 
-test('内置目录正好是用户指定的六个社区插件', () => {
+test('内置目录包含六个社区插件和插件市场', () => {
   assert.deepEqual(bundledPluginNames(), [
     '@michengai/dsh-codex-ui',
     '@michengai/dsh-im-connect',
@@ -11,16 +11,18 @@ test('内置目录正好是用户指定的六个社区插件', () => {
     '@michengai/dsh-skills-manager',
     '@michengai/dsh-archive-manager',
     '@michengai/dsh-agency-agents',
+    'dshmarket',
   ])
-  assert.equal(BUNDLED_PLUGINS.length, 6)
+  assert.equal(BUNDLED_PLUGINS.length, 7)
   assert.equal(SUITE_PACKAGE, '@michengai/dsh-codex-suite')
 })
 
 test('每个内置插件都钉死精确版本', () => {
   for (const plugin of BUNDLED_PLUGINS) {
     assert.match(plugin.version, /^\d+\.\d+\.\d+$/)
-    assert.equal(plugin.packageName.startsWith('@michengai/'), true)
+    assert.equal(plugin.packageName.startsWith('@michengai/') || plugin.packageName === 'dshmarket', true)
   }
+  assert.equal(BUNDLED_PLUGINS.find(plugin => plugin.packageName === 'dshmarket')?.version, '1.16.0')
 })
 
 test('官方 DSH 家族锁在同一个精确版本', () => {
