@@ -85,14 +85,26 @@ The installer ships with the local runtime required to start DSH. On first launc
 
 | Included capability | Package |
 | --- | --- |
-| Codex-style workspace UI | `@michengai/dsh-codex-ui` |
-| Expert preset management | `@michengai/dsh-agency-agents` |
-| Skill management | `@michengai/dsh-skills-manager` |
-| Archive management | `@michengai/dsh-archive-manager` |
-| IM assistant | `@michengai/dsh-im-connect` |
-| Scheduled automation | `@michengai/dsh-automation` |
+| Codex-style workspace UI | [`@michengai/dsh-codex-ui`](https://github.com/MichengAI/dsh-codex-ui) |
+| Expert preset management | [`@michengai/dsh-agency-agents`](https://github.com/MichengAI/dsh-agency-agents) |
+| Skill management | [`@michengai/dsh-skills-manager`](https://github.com/MichengAI/dsh-skills-manager) |
+| Archive management | [`@michengai/dsh-archive-manager`](https://github.com/MichengAI/dsh-archive-manager) |
+| IM assistant | [`@michengai/dsh-im-connect`](https://github.com/MichengAI/dsh-im-connect) |
+| Scheduled automation | [`@michengai/dsh-automation`](https://github.com/MichengAI/dsh-automation) |
 
 You can later manage additional plugins from the plugin market. The desktop application keeps its own runtime separate from profile-installed community plugins so plugin changes do not overwrite the application runtime.
+
+## DSH product ecosystem
+
+DSH Codex Desktop combines the core runtime, feature products, and plugin market into a ready-to-install desktop product. The same products can also be used separately for other DSH setups:
+
+| Product | Primary role | Relationship to the desktop app |
+| --- | --- | --- |
+| [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) | Models, sessions, tools, and plugin runtime | The core runtime bundled and started by the desktop app |
+| **DSH Codex Desktop** | Cross-platform workbench for end users | This product, responsible for ready-to-run installation, updates, and recovery |
+| [DSH Codex Suite](https://github.com/MichengAI/dsh-codex-ui/tree/main/packages/dsh-codex-suite) | One-click feature suite for existing DSH Web environments | Installs the same six feature products without the desktop runtime |
+| Six feature products | [Codex UI](https://github.com/MichengAI/dsh-codex-ui) · [IM Connect](https://github.com/MichengAI/dsh-im-connect) · [Automation](https://github.com/MichengAI/dsh-automation) · [Skills Manager](https://github.com/MichengAI/dsh-skills-manager) · [Archive Manager](https://github.com/MichengAI/dsh-archive-manager) · [Agency Agents](https://github.com/MichengAI/dsh-agency-agents) | Each can be installed independently; all six are bundled with the desktop app |
+| `dshmarket` | Discover, install, and update more DSH plugins | Included as the plugin market |
 
 ## Updates and recovery
 
