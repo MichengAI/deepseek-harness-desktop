@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
+import { join } from 'node:path'
 import test from 'node:test'
 
 import { profileActivationFingerprint, shouldRecycleForProfileFingerprint, watchProfileActivation } from '../src/profile-watch.js'
@@ -34,13 +35,15 @@ test('依赖或 bundle 变化才需要热重启 DSH', () => {
 
 test('profile 清单变化后会触发一次热重启', async () => {
   const installed = new Set<string>()
+  const profileDir = 'D:\\profile\\web'
+  const manifestPath = join(profileDir, 'package.json')
   const files = new Map<string, string>([[
-    'D:\\profile\\web\\package.json',
+    manifestPath,
     JSON.stringify({ dependencies: {}, dsh: { profile: { bundles: [] } } }),
   ]])
   let listener: ((event: string, filename: string) => void) | undefined
   const fired: number[] = []
-  const handle = watchProfileActivation('D:\\profile\\web', () => { fired.push(Date.now()) }, {
+  const handle = watchProfileActivation(profileDir, () => { fired.push(Date.now()) }, {
     debounceMs: 20,
     isInstalled: (name) => installed.has(name),
     read: (path) => files.get(path) ?? '',
@@ -49,7 +52,7 @@ test('profile 清单变化后会触发一次热重启', async () => {
       return { close: () => { listener = undefined } }
     },
   })
-  files.set('D:\\profile\\web\\package.json', JSON.stringify({
+  files.set(manifestPath, JSON.stringify({
     dependencies: { 'dsh-file-upload': '1.0.0' },
     dsh: { profile: { bundles: ['dsh-file-upload'] } },
   }))
@@ -57,7 +60,7 @@ test('profile 清单变化后会触发一次热重启', async () => {
   await new Promise(resolve => setTimeout(resolve, 80))
   assert.equal(fired.length, 0)
   installed.add('dsh-better-sidebar')
-  files.set('D:\\profile\\web\\package.json', JSON.stringify({
+  files.set(manifestPath, JSON.stringify({
     dependencies: { 'dsh-better-sidebar': '0.13.1' },
     dsh: { profile: { bundles: ['dsh-better-sidebar'] } },
   }))

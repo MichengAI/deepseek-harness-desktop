@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { join } from 'node:path'
+import { join, win32 } from 'node:path'
 import test from 'node:test'
 
 import { DESKTOP_APP_NAME, DESKTOP_USER_DATA_DIR, resolveDesktopRuntimeDir, resolveDesktopUserDataDir } from '../src/app-identity.js'
@@ -19,7 +19,7 @@ test('打包后官方运行时优先放安装目录，而不是 C 盘 AppData', 
       platform: 'win32',
       canWrite: () => true,
     }),
-    join('D:\\Apps\\DSH Codex Desktop', 'dsh-runtime'),
+    win32.join('D:\\Apps\\DSH Codex Desktop', 'dsh-runtime'),
   )
 })
 

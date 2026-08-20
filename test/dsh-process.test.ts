@@ -51,7 +51,7 @@ async function assertFixtureStoppedAfterFailure(mode: 'silent' | 'unhealthy', me
   const root = await mkdtemp(join(tmpdir(), 'dsh-process-'))
   const pidFile = join(root, 'pid.txt')
   try {
-    await assert.rejects(startFixture(mode, 100, { DSH_FIXTURE_PID_FILE: pidFile }), message)
+    await assert.rejects(startFixture(mode, 1_000, { DSH_FIXTURE_PID_FILE: pidFile }), message)
     const pid = Number(await readFile(pidFile, 'utf8'))
     assert.throws(() => process.kill(pid, 0))
   } finally {

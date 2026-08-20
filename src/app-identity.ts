@@ -1,5 +1,5 @@
 import { mkdtempSync, rmSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, win32 } from 'node:path'
 
 export const DESKTOP_APP_NAME = 'DSH Codex Desktop'
 export const DESKTOP_USER_DATA_DIR = DESKTOP_APP_NAME
@@ -16,10 +16,12 @@ export function resolveDesktopRuntimeDir(userDataDir: string, options: {
   platform?: NodeJS.Platform
   canWrite?: (dir: string) => boolean
 }): string {
-  if (options.isPackaged && (options.platform ?? process.platform) !== 'darwin') {
-    const installDir = dirname(options.execPath)
+  const platform = options.platform ?? process.platform
+  if (options.isPackaged && platform !== 'darwin') {
+    const path = platform === 'win32' ? win32 : { dirname, join }
+    const installDir = path.dirname(options.execPath)
     const canWrite = options.canWrite ?? canWriteDirectory
-    if (canWrite(installDir)) return join(installDir, 'dsh-runtime')
+    if (canWrite(installDir)) return path.join(installDir, 'dsh-runtime')
   }
   return join(userDataDir, 'dsh-runtime')
 }
