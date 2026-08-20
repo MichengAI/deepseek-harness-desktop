@@ -1,139 +1,141 @@
 <p align="center">
-  <img src="assets/icon.png" alt="DeepSeek Harness Desktop" width="96">
+  <img src="assets/branding/dsh-codex-desktop-banner.png" alt="DSH Codex Desktop product banner" width="100%">
 </p>
 
-<h1 align="center">DeepSeek Harness Desktop</h1>
+<div align="center">
 
-<p align="center">
-  <strong>A native desktop launcher for DeepSeek Harness on Windows, macOS, and Linux.</strong>
-</p>
+# DSH Codex Desktop
 
-<p align="center">
-  <a href="https://github.com/MichengAI/dsh-codex-desktop/releases">Download</a> ·
-  <a href="https://github.com/MichengAI/dsh-codex-desktop/issues">Report an issue</a>
-</p>
+**Download once. Open a ready-to-use local AI workspace.**
 
-<p align="center">
-  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
-</p>
+[简体中文](README.zh-CN.md) · [Download](https://github.com/MichengAI/dsh-codex-desktop/releases) · [Report an issue](https://github.com/MichengAI/dsh-codex-desktop/issues)
 
-<p align="center">
-  <a href="https://github.com/MichengAI/dsh-codex-desktop/releases"><img src="https://img.shields.io/github/v/release/MichengAI/dsh-codex-desktop?display_name=tag&label=release" alt="Release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="Apache License 2.0"></a>
-  <a href="https://github.com/MichengAI/dsh-codex-desktop/actions/workflows/desktop-package.yml"><img src="https://github.com/MichengAI/dsh-codex-desktop/actions/workflows/desktop-package.yml/badge.svg?branch=main" alt="Desktop package"></a>
-  <img src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-000000?logo=apple&logoColor=white" alt="macOS Apple Silicon and Intel">
-  <img src="https://img.shields.io/badge/Windows-x64-0078D4?logo=windows&logoColor=white" alt="Windows x64">
-  <img src="https://img.shields.io/badge/Linux-x64-FCC624?logo=linux&logoColor=black" alt="Linux x64">
-</p>
+[![Release](https://img.shields.io/github/v/release/MichengAI/dsh-codex-desktop?display_name=tag&label=release)](https://github.com/MichengAI/dsh-codex-desktop/releases)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Desktop package](https://github.com/MichengAI/dsh-codex-desktop/actions/workflows/desktop-package.yml/badge.svg?branch=main)](https://github.com/MichengAI/dsh-codex-desktop/actions/workflows/desktop-package.yml)
+![Windows x64](https://img.shields.io/badge/Windows-x64-0078D4?logo=windows&logoColor=white)
+![macOS](https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-000000?logo=apple&logoColor=white)
+![Linux x64](https://img.shields.io/badge/Linux-x64-FCC624?logo=linux&logoColor=black)
 
-<p align="center">
-  <img src="assets/screenshots/workspace-session.png" alt="Workspace and coding review session" width="960">
-</p>
+</div>
 
-> DeepSeek Harness Desktop is a community-maintained distribution project. It is not an official DeepSeek AI product.
+> DSH Codex Desktop is a community-maintained desktop distribution of DeepSeek Harness. It is not an official DeepSeek AI product.
 
-DeepSeek Harness Desktop packages the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) web experience as a native desktop application. It bundles the required Node.js runtime, starts DSH locally, and opens the interface in a dedicated desktop window.
+DSH Codex Desktop turns [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) into a native, ready-to-run desktop workbench. The installer includes the required Node.js runtime and local DSH runtime: install it, open it, then start working. You do not need to prepare a Node.js environment or launch DSH from a terminal.
 
-## Download
+## Download and start
 
-Download supported packages from [GitHub Releases](https://github.com/MichengAI/dsh-codex-desktop/releases).
+Get the current installer from [GitHub Releases](https://github.com/MichengAI/dsh-codex-desktop/releases).
 
-| Platform | Package | Release status |
+| Platform | Package | Start here |
 | --- | --- | --- |
-| Windows x64 | **.exe** installer | Available · [Download](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-win-x64.exe) |
-| Windows x64 | **.zip** archive | Available · [Download](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-win-x64.zip) |
-| macOS Apple Silicon | **.dmg** installer | Available · [Download](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-mac-arm64.dmg) |
-| macOS Intel | **.dmg** installer | Available · [Download](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-mac-x64.dmg) |
-| Linux x64 | **.AppImage** | Available · [Download](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-linux-x86_64.AppImage) |
-| Debian / Ubuntu x64 | **.deb** package | Available · [Download](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-linux-amd64.deb) |
+| Windows x64 | `.exe` installer or `.zip` archive | Run the installer, then open **DSH Codex Desktop** from the Start menu. |
+| macOS Apple Silicon / Intel | `.dmg` installer | Open the disk image, move the app to Applications, then launch it. |
+| Linux x64 | `.AppImage` or Debian / Ubuntu `.deb` | Run the AppImage or install the deb package, then launch the app. |
 
-All current and historical packages are available from [GitHub Releases](https://github.com/MichengAI/dsh-codex-desktop/releases).
+1. Download the package for your platform.
+2. Install and open **DSH Codex Desktop**.
+3. Wait for the built-in local DSH service to finish starting.
+4. Create a task, select a model and permission mode, then work in your project.
 
-## Screenshots
+The application keeps DSH data in your existing user profile (`%USERPROFILE%\.dsh` on Windows), so sessions and settings remain available after application upgrades.
 
-<p align="center">
-  <em>Start a new workspace conversation with model and permission controls.</em>
-</p>
+## A complete desktop workbench
 
-<p align="center">
-  <img src="assets/screenshots/settings.png" alt="Desktop settings" width="960">
-</p>
+| Capability | What you get |
+| --- | --- |
+| **Desktop conversation workspace** | Project and task navigation, conversation sessions, model selection, permissions, session logs, and a focused desktop window. |
+| **Expert presets** | Enable specialist roles for code review, architecture, frontend, backend, operations, and other workflows. |
+| **Skill center** | Inspect, enable, disable, upload, and manage local and shared Agent skills from Settings. |
+| **Archive management** | Search archived conversations, restore a session when needed, or permanently remove archived records. |
+| **IM assistant** | Configure DingTalk, Feishu, Lark, WeChat, WeCom, QQ, Telegram, and other available channels in one place. |
+| **Plugin market** | Discover, install, update, enable, and diagnose DSH plugins without leaving the desktop client. |
+| **Scheduled automation** | Use the built-in DSH scheduling capability to manage recurring tasks from the same workspace. |
+| **Safe local runtime** | The app starts DSH on a validated loopback address and keeps the browser UI inside the desktop shell. |
 
-<p align="center">
-  <em>Choose a built-in Agent preset or create a custom preset.</em>
-</p>
+## Product preview
 
-## What it provides
+<p align="center"><em>Dark workspace: project context, a long-running task, and the desktop conversation surface.</em></p>
 
-- **Native startup** — installs and launches DeepSeek Harness on Windows, macOS, and Linux without a separate Node.js installation.
-- **Local DSH runtime** — starts DSH on a randomly assigned loopback port and renders it in an Electron window.
-- **Focused desktop workflow** — uses the existing DSH workspace, session, model, plugin, and Agent preset capabilities.
-- **Bundled community plugins** — first launch seeds Codex UI, IM, automation, skills, archive, and agency experts into the Web profile. Later installs and updates still go through code-ui / dshmarket via `dsh plugin add`.
-- **Desktop behavior** — single-instance protection, system-tray controls, and safe handling of external links.
-- **Continuity with DSH CLI** — reuses the current user's DSH home directory, including existing settings and sessions.
+<p align="center"><img src="assets/screenshots/desktop-conversation-dark.png" alt="DSH Codex Desktop dark conversation workspace" width="960"></p>
 
-## Requirements
+<p align="center"><em>Light workspace: the same task surface in the light theme.</em></p>
+
+<p align="center"><img src="assets/screenshots/desktop-conversation-light.png" alt="DSH Codex Desktop light conversation workspace" width="960"></p>
+
+<p align="center"><em>Archived conversations stay searchable and can be restored from Settings.</em></p>
+
+<p align="center"><img src="assets/screenshots/desktop-archive.png" alt="Archived conversation management" width="960"></p>
+
+<p align="center"><em>Manage the skills available to DSH and your Agents.</em></p>
+
+<p align="center"><img src="assets/screenshots/desktop-skills.png" alt="Skill management" width="960"></p>
+
+<p align="center"><em>Connect channels for IM-assisted workflows.</em></p>
+
+<p align="center"><img src="assets/screenshots/desktop-im-channels.png" alt="IM channel configuration" width="960"></p>
+
+<p align="center"><em>Enable only the expert presets that match the current task.</em></p>
+
+<p align="center"><img src="assets/screenshots/desktop-experts.png" alt="Expert preset management" width="960"></p>
+
+## Included on first launch
+
+The installer ships with the local runtime required to start DSH. On first launch, it prepares the desktop-facing community plugins in the Web profile:
+
+| Included capability | Package |
+| --- | --- |
+| Codex-style workspace UI | `@michengai/dsh-codex-ui` |
+| Expert preset management | `@michengai/dsh-agency-agents` |
+| Skill management | `@michengai/dsh-skills-manager` |
+| Archive management | `@michengai/dsh-archive-manager` |
+| IM assistant | `@michengai/dsh-im-connect` |
+| Scheduled automation | `@michengai/dsh-automation` |
+
+You can later manage additional plugins from the plugin market. The desktop application keeps its own runtime separate from profile-installed community plugins so plugin changes do not overwrite the application runtime.
+
+## Updates and recovery
+
+- **Desktop updates** are manual: use the tray menu to check for a new desktop version, download it, then choose install and restart.
+- **DSH reload** is available from the tray menu after changing plugins or profile configuration; it restarts the local DSH service without reinstalling the desktop application.
+- **Plugin updates** remain in the DSH settings and plugin market. A failed plugin installation is not activated as a running bundle.
+- **Startup recovery** removes stale community-plugin registrations that no longer have an installed package, then retries the local DSH startup.
+
+## System requirements
 
 | Item | Requirement |
 | --- | --- |
 | Operating system | Windows 10/11, macOS, or Linux |
-| Architecture | Windows x64, macOS Apple Silicon (arm64), macOS Intel (x64), or Linux x64 |
-| Network | Required only for the model providers and tools you configure |
+| Architecture | Windows x64, macOS arm64/x64, or Linux x64 |
 | Node.js | Not required for end users; bundled with the application |
-
-## Install and get started
-
-1. Download the package for your operating system from [Releases](https://github.com/MichengAI/dsh-codex-desktop/releases).
-2. Run the Windows **.exe** installer, open the macOS **.dmg**, run the Linux **.AppImage**, or install the Debian/Ubuntu **.deb** package; then launch **DeepSeek Harness Desktop**.
-3. Wait for the local DSH service to start, then create or open a workspace and session.
-4. Configure models, plugins, permissions, and Agent presets in DSH settings as needed.
-
-The installer bundles a complete runtime. Installation and first startup can take several minutes on some machines; allow the process to finish before cancelling.
+| Network | Required only for the model providers, plugin downloads, and tools you choose to use |
 
 ## Privacy and security
 
-- The launcher accepts and loads only validated local HTTP addresses on **127.0.0.1**.
-- External HTTP(S) links open in the system browser; file, JavaScript, and data URLs are blocked.
-- Electron runs with Node.js integration disabled, context isolation enabled, and sandboxing enabled.
-- DSH configuration, sessions, and credentials remain in **~/.dsh** (on Windows: **%USERPROFILE%\.dsh**). Uninstalling the desktop launcher does not remove that directory.
-- The launcher does not expose Electron IPC APIs to the DSH page.
-
-Your configured model providers and DSH tools may make their own network requests. Review their respective settings and policies before use.
-
-## Troubleshooting
-
-| Situation | What to do |
-| --- | --- |
-| Installation appears to pause | Wait several minutes. The installer is extracting the bundled runtime. |
-| macOS says the app cannot be opened | Move the application to Applications, then open it again and follow the system prompt. |
-| Startup fails | Reopen the app and check the diagnostic path shown in the error window. |
-| Existing DSH data is not visible | Confirm you are using the same account and inspect ~/.dsh (on Windows: %USERPROFILE%\.dsh). |
+- DSH configuration, sessions, and credentials remain in the current user's DSH directory. Uninstalling the desktop app does not delete them.
+- The launcher accepts only validated `127.0.0.1` local HTTP addresses for its embedded window.
+- External HTTP(S) links open in the system browser. File, JavaScript, and data URLs are blocked.
+- Electron uses context isolation and sandboxing, with Node.js integration disabled for the DSH page.
+- Your configured model providers and DSH tools may make their own network requests. Review their settings and privacy policies before use.
 
 ## Development
 
-Development requires Windows, Node.js 24.19.0, pnpm 11.20.0, and a built checkout of DeepSeek Harness.
+Development requires Windows, Node.js `24.19.0`, and pnpm `11.20.0`.
 
-~~~powershell
+```powershell
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 pnpm install --frozen-lockfile
 pnpm test
-$env:DSH_RUNTIME_ROOT = 'D:\Repository\deepseek-harness'
 pnpm run dist
-~~~
+```
 
-Build output is written locally to **release\** and is not committed. Pushing a **vX.Y.Z** tag builds Windows x64, macOS Apple Silicon/Intel, and Linux x64 AppImage/DEB packages.
+Local build artifacts are written to `release\` and are not committed. Pushing a `vX.Y.Z` tag starts the packaging workflow for Windows x64, macOS arm64/x64, and Linux x64 AppImage / deb artifacts.
 
 ## Project documentation
 
-Project status, active work, architecture constraints, and iteration records are available from the [documentation entry point](docs/00-交接入口/00-阅读导航.md).
-
-## Support and contribution
-
-- Report defects and feature requests through [GitHub Issues](https://github.com/MichengAI/dsh-codex-desktop/issues).
-- Before submitting a pull request, run the test suite and keep user-facing text in Simplified Chinese where applicable.
-- See the upstream [DeepSeek Harness repository](https://github.com/deepseek-ai/deepseek-harness) for DSH-specific functionality and documentation.
+For current status, architecture constraints, and iteration records, start at the [documentation entry point](docs/00-交接入口/00-阅读导航.md).
 
 ## License
 
-This project is licensed under the [Apache License 2.0](LICENSE).
+This project is licensed under [Apache License 2.0](LICENSE).

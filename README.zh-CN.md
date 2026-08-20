@@ -1,139 +1,140 @@
 <p align="center">
-  <img src="assets/icon.png" alt="DeepSeek Harness Desktop" width="96">
+  <img src="assets/branding/dsh-codex-desktop-banner.png" alt="DSH Codex Desktop 产品横幅" width="100%">
 </p>
 
-<h1 align="center">DeepSeek Harness Desktop</h1>
+<div align="center">
 
-<p align="center">
-  <strong>支持 Windows、macOS 与 Linux 的 DeepSeek Harness 原生桌面启动器。</strong>
-</p>
+# DSH Codex Desktop
 
-<p align="center">
-  <a href="https://github.com/MichengAI/dsh-codex-desktop/releases">下载</a> ·
-  <a href="https://github.com/MichengAI/dsh-codex-desktop/issues">反馈问题</a>
-</p>
+**下载安装，打开就是可用的本地 AI 工作台。**
 
-<p align="center">
-  <a href="README.md">English</a> · <strong>简体中文</strong>
-</p>
+[English](README.md) · [下载](https://github.com/MichengAI/dsh-codex-desktop/releases) · [反馈问题](https://github.com/MichengAI/dsh-codex-desktop/issues)
 
-<p align="center">
-  <a href="https://github.com/MichengAI/dsh-codex-desktop/releases"><img src="https://img.shields.io/github/v/release/MichengAI/dsh-codex-desktop?display_name=tag&label=release" alt="发布版本"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="Apache License 2.0 许可证"></a>
-  <a href="https://github.com/MichengAI/dsh-codex-desktop/actions/workflows/desktop-package.yml"><img src="https://github.com/MichengAI/dsh-codex-desktop/actions/workflows/desktop-package.yml/badge.svg?branch=main" alt="桌面端打包"></a>
-  <img src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-000000?logo=apple&logoColor=white" alt="macOS Apple Silicon 与 Intel">
-  <img src="https://img.shields.io/badge/Windows-x64-0078D4?logo=windows&logoColor=white" alt="Windows x64">
-  <img src="https://img.shields.io/badge/Linux-x64-FCC624?logo=linux&logoColor=black" alt="Linux x64">
-</p>
+[![发布版本](https://img.shields.io/github/v/release/MichengAI/dsh-codex-desktop?display_name=tag&label=release)](https://github.com/MichengAI/dsh-codex-desktop/releases)
+[![许可证](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![桌面端打包](https://github.com/MichengAI/dsh-codex-desktop/actions/workflows/desktop-package.yml/badge.svg?branch=main)](https://github.com/MichengAI/dsh-codex-desktop/actions/workflows/desktop-package.yml)
+![Windows x64](https://img.shields.io/badge/Windows-x64-0078D4?logo=windows&logoColor=white)
+![macOS](https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-000000?logo=apple&logoColor=white)
+![Linux x64](https://img.shields.io/badge/Linux-x64-FCC624?logo=linux&logoColor=black)
 
-<p align="center">
-  <img src="assets/screenshots/workspace-session.png" alt="工作区与代码审查会话界面" width="960">
-</p>
+</div>
 
-> DeepSeek Harness Desktop 是社区维护的分发项目，并非 DeepSeek AI 官方产品。
+> DSH Codex Desktop 是 DeepSeek Harness 的社区维护桌面发行版，并非 DeepSeek AI 官方产品。
 
-DeepSeek Harness Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的 Web 使用体验封装为原生桌面应用。它随安装包提供所需 Node.js 运行时，在本机启动 DSH，并在独立桌面窗口中打开界面。
+DSH Codex Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 封装为原生桌面工作台。安装包已经包含 Node.js 和本地 DSH 运行时：下载安装、打开应用，即可开始使用；不需要自行配置 Node.js 环境，也不必从终端启动 DSH。
 
-## 下载
+## 下载后即可开始
 
-请从 [GitHub Releases](https://github.com/MichengAI/dsh-codex-desktop/releases) 下载对应平台的安装包。
+请从 [GitHub Releases](https://github.com/MichengAI/dsh-codex-desktop/releases) 下载最新安装包。
 
-| 平台 | 文件 | 发布状态 |
+| 平台 | 安装包 | 开始方式 |
 | --- | --- | --- |
-| Windows x64 | **.exe** 安装器 | 已发布 · [下载](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-win-x64.exe) |
-| Windows x64 | **.zip** 压缩包 | 已发布 · [下载](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-win-x64.zip) |
-| macOS Apple Silicon | **.dmg** 安装器 | 已发布 · [下载](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-mac-arm64.dmg) |
-| macOS Intel | **.dmg** 安装器 | 已发布 · [下载](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-mac-x64.dmg) |
-| Linux x64 | **.AppImage** | 已发布 · [下载](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-linux-x86_64.AppImage) |
-| Debian / Ubuntu x64 | **.deb** 安装包 | 已发布 · [下载](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-linux-amd64.deb) |
+| Windows x64 | `.exe` 安装器或 `.zip` 压缩包 | 运行安装器，然后从开始菜单打开 **DSH Codex Desktop**。 |
+| macOS Apple Silicon / Intel | `.dmg` 安装器 | 打开磁盘映像，将应用拖入“应用程序”后启动。 |
+| Linux x64 | `.AppImage` 或 Debian / Ubuntu `.deb` | 运行 AppImage 或安装 deb 包后启动应用。 |
 
-全部当前与历史安装包请从 [GitHub Releases](https://github.com/MichengAI/dsh-codex-desktop/releases) 获取。
+1. 下载对应平台的安装包。
+2. 安装并打开 **DSH Codex Desktop**。
+3. 等待内置的本地 DSH 服务启动完成。
+4. 新建任务，选择模型和权限模式，在项目中开始工作。
 
-## 界面预览
+应用沿用当前用户的 DSH 数据目录（Windows 为 `%USERPROFILE%\.dsh`），升级桌面客户端后，已有会话和配置仍会保留。
 
-<p align="center">
-  <em>新建工作区会话，并选择模型与权限模式。</em>
-</p>
+## 开箱即用的完整工作台
 
-<p align="center">
-  <img src="assets/screenshots/settings.png" alt="桌面端设置界面" width="960">
-</p>
+| 能力 | 你可以直接使用 |
+| --- | --- |
+| **桌面会话工作区** | 项目和任务导航、会话对话、模型选择、权限模式、会话日志，以及专注的原生桌面窗口。 |
+| **专家预设** | 按当前任务启用代码审查、架构、前端、后端、运维等不同专业角色。 |
+| **技能中心** | 在设置中查看、启用、停用、上传和管理本地与共享 Agent 技能。 |
+| **归档管理** | 搜索已归档会话、按需恢复，或永久清理归档记录。 |
+| **IM 助理** | 在一个界面中配置钉钉、飞书、Lark、微信、企业微信、QQ、Telegram 等可用频道。 |
+| **插件市场** | 无需离开桌面客户端，即可发现、安装、更新、启用和诊断 DSH 插件。 |
+| **定时自动化** | 使用内置 DSH 定时能力，在同一工作台管理周期任务。 |
+| **安全的本地运行时** | 应用只在经过校验的本机回环地址启动 DSH，并将 Web 界面承载在桌面壳中。 |
 
-<p align="center">
-  <em>选择内置 Agent 预设，或创建自定义预设。</em>
-</p>
+## 产品预览
 
-## 核心能力
+<p align="center"><em>深色工作区：项目上下文、长任务过程与桌面对话界面。</em></p>
 
-- **原生启动**：无需单独安装 Node.js，即可在 Windows、macOS 与 Linux 安装和启动 DeepSeek Harness。
-- **本地 DSH 运行时**：以随机本机端口启动 DSH，并在 Electron 窗口中加载。
-- **保留 DSH 工作流**：继续使用 DSH 的工作区、会话、模型、插件和 Agent 预设能力。
-- **桌面端行为**：提供单实例保护、系统托盘控制及安全的外部链接处理。
-- **延续 CLI 数据**：沿用当前用户的 DSH 数据目录，保留既有设置和会话。
-- **随包社区插件**：首次启动把 Codex UI、IM、定时任务、技能、归档和专家六个插件写入 Web profile；之后仍可用 code-ui / dshmarket 在线安装或更新。
+<p align="center"><img src="assets/screenshots/desktop-conversation-dark.png" alt="深色桌面对话工作区" width="960"></p>
+
+<p align="center"><em>浅色工作区：同一任务界面的浅色主题。</em></p>
+
+<p align="center"><img src="assets/screenshots/desktop-conversation-light.png" alt="浅色桌面对话工作区" width="960"></p>
+
+<p align="center"><em>已归档会话可检索，并能从设置中恢复。</em></p>
+
+<p align="center"><img src="assets/screenshots/desktop-archive.png" alt="已归档会话管理" width="960"></p>
+
+<p align="center"><em>集中管理 DSH 与 Agent 可使用的技能。</em></p>
+
+<p align="center"><img src="assets/screenshots/desktop-skills.png" alt="技能管理" width="960"></p>
+
+<p align="center"><em>为 IM 助理工作流连接多个消息平台。</em></p>
+
+<p align="center"><img src="assets/screenshots/desktop-im-channels.png" alt="IM 频道配置" width="960"></p>
+
+<p align="center"><em>仅启用当前任务真正需要的专家预设。</em></p>
+
+<p align="center"><img src="assets/screenshots/desktop-experts.png" alt="专家预设管理" width="960"></p>
+
+## 首次启动已包含的能力
+
+安装包随附启动 DSH 所需的本地运行时。首次启动时，桌面客户端会为 Web profile 准备以下面向桌面工作流的社区插件：
+
+| 随附能力 | npm 包 |
+| --- | --- |
+| Codex 风格工作区界面 | `@michengai/dsh-codex-ui` |
+| 专家预设管理 | `@michengai/dsh-agency-agents` |
+| 技能管理 | `@michengai/dsh-skills-manager` |
+| 归档会话管理 | `@michengai/dsh-archive-manager` |
+| IM 助理 | `@michengai/dsh-im-connect` |
+| 定时自动化 | `@michengai/dsh-automation` |
+
+后续可以在插件市场管理更多插件。桌面应用的运行时与 profile 中安装的社区插件保持隔离，插件变更不会覆盖应用运行时。
+
+## 更新与自修复
+
+- **桌面端更新**：从托盘菜单手动检查新版本、下载后选择安装并重启；应用不会在启动时自动升级。
+- **重新加载 DSH**：修改插件或 profile 配置后，可从托盘菜单重新加载本地 DSH 服务，不需要重装桌面应用。
+- **插件更新**：仍在 DSH 设置和插件市场中完成；安装失败的插件不会被激活为运行 bundle。
+- **启动自修复**：启动时会移除磁盘上已不存在的社区插件登记，再重试启动本地 DSH。
 
 ## 系统要求
 
 | 项目 | 要求 |
 | --- | --- |
 | 操作系统 | Windows 10/11、macOS 或 Linux |
-| 架构 | Windows x64、macOS Apple Silicon（arm64）、macOS Intel（x64）或 Linux x64 |
-| 网络 | 仅在使用你配置的模型供应商和工具时需要 |
+| 架构 | Windows x64、macOS arm64/x64 或 Linux x64 |
 | Node.js | 终端用户无需安装，应用已内置 |
-
-## 安装与开始使用
-
-1. 前往 [Releases](https://github.com/MichengAI/dsh-codex-desktop/releases) 下载对应操作系统的安装包。
-2. Windows 运行 **.exe** 安装器；macOS 打开 **.dmg**；Linux 运行 **.AppImage** 或在 Debian / Ubuntu 安装 **.deb**，然后启动 **DeepSeek Harness Desktop**。
-3. 等待本地 DSH 服务启动，再创建或打开工作区和会话。
-4. 按需在 DSH 设置中配置模型、插件、权限和 Agent 预设。
-
-安装包包含完整运行时。部分设备在安装或首次启动时可能需要数分钟，请等待完成后再取消。
-
-桌面端安装包更新请用托盘右键「检查桌面端更新」，不会在启动时自动升级。插件更新仍在设置里的关于页。
+| 网络 | 仅在使用你配置的模型供应商、插件下载和工具时需要 |
 
 ## 隐私与安全
 
-- 启动器只接受并加载经校验的 **127.0.0.1** 本地 HTTP 地址。
+- DSH 配置、会话和凭据保存在当前用户的 DSH 目录中；卸载桌面应用不会删除这些数据。
+- 启动器只接受经过校验的 `127.0.0.1` 本地 HTTP 地址供内嵌窗口加载。
 - 外部 HTTP(S) 链接由系统浏览器打开；文件、JavaScript 和 data URL 会被拦截。
-- Electron 已禁用 Node.js 集成，并启用上下文隔离和沙箱。
-- DSH 配置、会话和凭据保存在 **~/.dsh**（Windows 为 **%USERPROFILE%\.dsh**）；卸载桌面启动器不会删除该目录。
-- 启动器不会向 DSH 页面暴露 Electron IPC 接口。
-
-你配置的模型供应商和 DSH 工具可能自行发起网络请求；使用前请核对其设置和隐私政策。
-
-## 常见问题
-
-| 情况 | 处理方式 |
-| --- | --- |
-| 安装进度似乎停住 | 请等待数分钟，安装器正在解压随包运行时。 |
-| macOS 提示无法打开应用 | 将应用移动到“应用程序”目录后重新打开，并按系统提示继续。 |
-| 启动失败 | 重新打开应用，并查看错误窗口显示的诊断日志路径。 |
-| 看不到已有 DSH 数据 | 确认使用同一账号，并检查 ~/.dsh（Windows 为 %USERPROFILE%\.dsh）。 |
+- DSH 页面已禁用 Node.js 集成，并启用上下文隔离与沙箱。
+- 你配置的模型供应商和 DSH 工具可能自行发起网络请求；使用前请核对其设置和隐私政策。
 
 ## 开发
 
-开发环境需要 Windows、Node.js 24.19.0 和 pnpm 11.20.0。DSH 运行时从 npm 包 @deepseek-ai/dsh 装配，不再依赖本地源码仓库。
+开发环境需要 Windows、Node.js `24.19.0` 和 pnpm `11.20.0`。
 
-~~~powershell
+```powershell
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 pnpm install --frozen-lockfile
 pnpm test
 pnpm run dist
-~~~
+```
 
-构建制品仅写入本地 **release\**，不会提交。推送 **vX.Y.Z** 标签后，工作流会构建 Windows x64、两种 macOS 架构，以及 Linux x64 的 AppImage 和 DEB。
+本地构建制品写入 `release\`，不会提交。推送 `vX.Y.Z` 标签后，工作流会打包 Windows x64、macOS arm64/x64，以及 Linux x64 的 AppImage / deb 制品。
 
 ## 项目文档
 
-项目状态、当前工作、技术约束和迭代记录，请从[文档交接入口](docs/00-交接入口/00-阅读导航.md)阅读。
-
-## 支持与贡献
-
-- 请通过 [GitHub Issues](https://github.com/MichengAI/dsh-codex-desktop/issues) 提交缺陷和功能建议。
-- 提交 Pull Request 前请运行测试，并保持用户可见文本使用简体中文。
-- DSH 本身的功能与文档，请参阅上游 [DeepSeek Harness 仓库](https://github.com/deepseek-ai/deepseek-harness)。
+当前状态、架构约束和迭代记录，请从[文档交接入口](docs/00-交接入口/00-阅读导航.md)开始阅读。
 
 ## 许可证
 
