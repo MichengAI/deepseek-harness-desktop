@@ -4,7 +4,7 @@ import { basename, join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
-const startupTimeoutMs = 120_000
+const startupTimeoutMs = 180_000
 
 export function resolveMacApplicationExecutable(applicationBundle: string, executableName = 'DSH Codex Desktop'): string {
   return join(applicationBundle, 'Contents', 'MacOS', executableName)
