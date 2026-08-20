@@ -1,6 +1,6 @@
 {
   "name": "deepseek-harness-desktop",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "DeepSeek Harness 原生桌面启动器",
   "author": "MichengAI",
   "desktopName": "DSH Codex Desktop",
@@ -51,8 +51,19 @@
       "output": "release"
     },
     "files": [
-      "dist/src/*.js",
-      "package.json"
+      "**/*",
+      "!src{,/**/*}",
+      "!scripts{,/**/*}",
+      "!test{,/**/*}",
+      "!assets{,/**/*}",
+      "!build{,/**/*}",
+      "!docs{,/**/*}",
+      "!release{,/**/*}",
+      "!runtime{,/**/*}",
+      "!runtime-node{,/**/*}",
+      "!runtime-plugins{,/**/*}",
+      "!runtime-dsh{,/**/*}",
+      "!runtime-dsh.tgz"
     ],
     "extraResources": [
       {

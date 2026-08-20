@@ -152,11 +152,12 @@ test('清理运行时目录必须可重试，避免 Windows ENOTEMPTY', async ()
   assert.equal(existsSync(root), false)
 })
 
-test('打包配置包含全部主进程编译模块', async () => {
+test('打包配置以完整编译产物为基础排除源码', async () => {
   const manifest = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8')) as {
     build?: { files?: string[] }
   }
-  assert.equal(manifest.build?.files?.includes('dist/src/*.js'), true)
+  assert.equal(manifest.build?.files?.includes('**/*'), true)
+  assert.equal(manifest.build?.files?.includes('!src{,/**/*}'), true)
 })
 
 test('Windows 冒烟检查使用实际产品可执行文件名', async () => {
