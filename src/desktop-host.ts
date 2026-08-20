@@ -2,8 +2,9 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import { PassThrough } from 'node:stream'
 
 import { OFFICIAL_DSH_VERSION, isOfficialDshPackage } from './bundled-plugins.js'
-import { APPLY_PLUGIN_UPDATES_IPC } from './dsh-process.js'
 import { finalizeProfileBundlesAfterInstall, officialRuntimeInstallArgs, writeOfficialRuntimeManifest } from './plugin-seed.js'
+
+const APPLY_PLUGIN_UPDATES_IPC = 'apply-plugin-updates'
 
 export const DESKTOP_BRIDGE_PACKAGE = 'dsh-desktop-bridge'
 

@@ -164,3 +164,10 @@ test('Windows 冒烟检查使用实际产品可执行文件名', async () => {
   const workflow = await readFile(new URL('../../.github/workflows/desktop-package.yml', import.meta.url), 'utf8')
   assert.match(workflow, /release\\win-unpacked\\DSH Codex Desktop\.exe/)
 })
+
+test('打包态从 desktop-bridge 加载 DSH 主进程模块', async () => {
+  const main = await readFile(new URL('../../src/main.ts', import.meta.url), 'utf8')
+  const host = await readFile(new URL('../../src/desktop-host.ts', import.meta.url), 'utf8')
+  assert.match(main, /desktop-bridge.*dsh-process\.js/)
+  assert.doesNotMatch(host, /from '\.\/dsh-process\.js'/)
+})

@@ -8,7 +8,7 @@ import { DESKTOP_APP_NAME, DESKTOP_APP_USER_MODEL_ID, resolveDesktopRuntimeDir, 
 import { resolveAppIconPath, resolveRasterIconPath, TRAY_ICON_SIZE } from './app-icon.js'
 import { WINDOW_ICON_PIXEL_SIZES, isLoopbackFaviconRequest } from './window-icon.js'
 import { quitDesktopApp, shouldHideInsteadOfClose } from './app-lifecycle.js'
-import { isApplyPluginUpdatesIpc, startDsh, type DshServer, type StartDshOptions } from './dsh-process.js'
+import type { DshServer, StartDshOptions } from './dsh-process.js'
 import { isExternalHttpUrl, isSameOrigin } from './navigation.js'
 import { applyPendingProfileUpdates, seedBundledPlugins, resolveWebProfileDir } from './plugin-seed.js'
 import { parseUnresolvedBundleError, removeProfileBundle, startWithProfileSelfRepair } from './profile-repair.js'
@@ -21,6 +21,16 @@ import { installDesktopBridge, resolveDesktopBridgeDir } from './desktop-host.js
 import { watchProfileActivation } from './profile-watch.js'
 import updater from 'electron-updater'
 import { buildDesktopTrayItems, desktopUpdatePrompt, publicDesktopUpdateError, type DesktopUpdateStatus } from './desktop-updater.js'
+
+interface DshProcessModule {
+  isApplyPluginUpdatesIpc: (message: unknown) => boolean
+  startDsh: (options: StartDshOptions) => Promise<DshServer>
+}
+
+const dshProcessModule = await import(app.isPackaged
+  ? pathToFileURL(join(process.resourcesPath, 'desktop-bridge', 'dsh-process.js')).href
+  : './dsh-process.js') as DshProcessModule
+const { isApplyPluginUpdatesIpc, startDsh } = dshProcessModule
 
 let mainWindow: BrowserWindow | undefined
 let server: DshServer | undefined
