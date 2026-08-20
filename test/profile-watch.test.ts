@@ -17,8 +17,13 @@ test('依赖或 bundle 变化才需要热重启 DSH', () => {
     dependencies: { 'dsh-better-sidebar': '0.13.0' },
     dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', 'dsh-file-upload'] } },
   }), installed)
+  const dependencyOnly = profileActivationFingerprint(JSON.stringify({
+    dependencies: { 'dsh-better-sidebar': '0.13.1' },
+    dsh: { profile: { bundles: ['@deepseek-ai/dsh-base'] } },
+  }), installed)
   assert.equal(shouldRecycleForProfileFingerprint(before, afterInstall), true)
   assert.equal(shouldRecycleForProfileFingerprint(before, phantom), false)
+  assert.equal(shouldRecycleForProfileFingerprint(before, dependencyOnly), false)
 })
 
 test('profile 清单变化后会触发一次热重启', async () => {

@@ -82,6 +82,11 @@ export function shouldRecycleAfterPluginResult(
   return names.every((name) => isInstalled(name))
 }
 
+/** pnpm 会在脚本被拦截时保留包文件甚至返回 0；此状态不能激活或重启 DSH。 */
+export function hasIgnoredBuildScripts(output: string): boolean {
+  return /ignored[ -]build scripts|ignored-scripts|ERR_PNPM_IGNORED_BUILDS/i.test(output)
+}
+
 export function createDesktopHostServices(options: DesktopHostOptions) {
   const runPlugin = (args: readonly string[], invokingDir: string, signal?: AbortSignal): DesktopPnpmHandle => {
     const officialVersion = officialPluginUpdateVersion(args)
@@ -110,8 +115,12 @@ export function createDesktopHostServices(options: DesktopHostOptions) {
       }
     }
     const handle = (options.runner ?? runBundledPnpm)(args, invokingDir, signal)
+    let output = ''
+    const capture = (chunk: Buffer | string): void => { output = (output + chunk.toString()).slice(-12_000) }
+    handle.stdout.on('data', capture)
+    handle.stderr.on('data', capture)
     void handle.done.then(async (outcome) => {
-      if (outcome.exitCode !== 0) return
+      if (outcome.exitCode !== 0 || hasIgnoredBuildScripts(output)) return
       const isInstalled = options.isInstalled ?? ((packageName) => existsSync(join(options.profileDir, 'node_modules', ...packageName.split('/'), 'package.json')))
       await finalizeProfileBundlesAfterInstall(options.profileDir)
       if (!shouldRecycleAfterPluginResult(args, isInstalled)) return

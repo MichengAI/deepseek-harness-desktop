@@ -8,9 +8,11 @@ export function profileActivationFingerprint(source: string, isInstalled?: (pack
       dsh?: { profile?: { bundles?: string[] } }
     }
     const installed = (name: string): boolean => isInstalled?.(name) !== false
+    const dependencies = manifest.dependencies ?? {}
+    const bundles = (manifest.dsh?.profile?.bundles ?? []).filter((name) => name.startsWith('@deepseek-ai/') || (dependencies[name] !== undefined && installed(name)))
     return JSON.stringify({
-      dependencies: Object.fromEntries(Object.entries(manifest.dependencies ?? {}).filter(([name]) => installed(name))),
-      bundles: (manifest.dsh?.profile?.bundles ?? []).filter((name) => name.startsWith('@deepseek-ai/') || installed(name)),
+      dependencies: Object.fromEntries(bundles.filter((name) => !name.startsWith('@deepseek-ai/')).map((name) => [name, dependencies[name]])),
+      bundles,
     })
   } catch {
     return ''

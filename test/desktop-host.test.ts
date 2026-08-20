@@ -91,6 +91,34 @@ test('安装失败时不得把残留包写进运行清单或重启', async () =>
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test('pnpm 拦截构建脚本时不得把安装当作成功或重启', async () => {
+  const sent: unknown[] = []
+  const host = createDesktopHostServices({
+    profileName: 'web',
+    profileDir: 'D:\\profile\\web',
+    recycleDelayMs: 0,
+    send: (message) => { sent.push(message) },
+    isInstalled: () => true,
+    runner: () => {
+      const stdout = new PassThrough()
+      const stderr = new PassThrough()
+      queueMicrotask(() => {
+        stdout.end('Ignored build scripts: sharp, tesseract.js')
+        stderr.end()
+      })
+      return {
+        stdout,
+        stderr,
+        done: Promise.resolve({ exitCode: 0, signal: null }),
+        cancel: () => undefined,
+      }
+    },
+  })
+  await host.desktopPnpm.runPlugin(['add', 'dsh-file-upload@0.4.3'], 'D:\\profile\\web').done
+  await new Promise((resolve) => setTimeout(resolve, 10))
+  assert.deepEqual(sent, [])
+})
 test('会把桌面桥接插件写进 profile patch 顶部', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dsh-bridge-'))
   try {
