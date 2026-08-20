@@ -484,15 +484,18 @@ export async function reconcileProfileBundles(profileDir: string): Promise<strin
   return bundles
 }
 
-/** 缺包的社区 bundle 会让 DSH 直接退出；启动前摘掉，官方 bundle 仍由运行时解析。 */
+/** 未声明或缺包的社区 bundle 会让 DSH 直接退出；启动前摘掉，官方 bundle 仍由运行时解析。 */
 export async function pruneMissingProfileBundles(profileDir: string, extraDirs: readonly string[] = []): Promise<string[]> {
   const manifestPath = join(profileDir, 'package.json')
   if (!existsSync(manifestPath)) return []
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as {
+    dependencies?: Record<string, string>
     dsh?: { profile?: { bundles?: string[] } }
   }
   const current = manifest.dsh?.profile?.bundles ?? []
-  const next = current.filter((packageName) => isResolvableProfileBundle(profileDir, packageName, extraDirs))
+  const dependencies = new Set(Object.keys(manifest.dependencies ?? {}))
+  const next = current.filter((packageName) => (OFFICIAL_PROFILE_BUNDLES as readonly string[]).includes(packageName)
+    || (dependencies.has(packageName) && isResolvableProfileBundle(profileDir, packageName, extraDirs)))
   const removed = current.filter((packageName) => !next.includes(packageName))
   if (removed.length === 0) return []
   manifest.dsh = { ...manifest.dsh, profile: { ...manifest.dsh?.profile, bundles: next } }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { PassThrough } from 'node:stream'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
@@ -49,6 +49,47 @@ test('desktopPnpm 安装成功后通知桌面端热更新', async () => {
   await host.desktopPnpm.runPlugin(['add', 'demo@1.0.0'], 'D:\\profile\\web').done
   await new Promise((resolve) => setTimeout(resolve, 10))
   assert.deepEqual(sent, [APPLY_PLUGIN_UPDATES_IPC])
+})
+
+test('安装失败时不得把残留包写进运行清单或重启', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-failed-install-'))
+  try {
+    await mkdir(join(root, 'node_modules', 'dsh-file-upload'), { recursive: true })
+    await writeFile(join(root, 'node_modules', 'dsh-file-upload', 'package.json'), JSON.stringify({
+      name: 'dsh-file-upload',
+      dsh: { bundle: { patch: 'cordis.patch.yml' } },
+    }), 'utf8')
+    await writeFile(join(root, 'package.json'), JSON.stringify({
+      dependencies: { 'dsh-file-upload': '^0.4.3' },
+      dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'] } },
+    }), 'utf8')
+    const sent: unknown[] = []
+    const host = createDesktopHostServices({
+      profileName: 'web',
+      profileDir: root,
+      recycleDelayMs: 0,
+      send: (message) => { sent.push(message) },
+      runner: () => {
+        const stdout = new PassThrough()
+        const stderr = new PassThrough()
+        stdout.end()
+        stderr.end()
+        return {
+          stdout,
+          stderr,
+          done: Promise.resolve({ exitCode: 1, signal: null }),
+          cancel: () => undefined,
+        }
+      },
+    })
+    await host.desktopPnpm.runPlugin(['add', 'dsh-file-upload@0.4.3'], root).done
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')) as { dsh?: { profile?: { bundles?: string[] } } }
+    assert.equal(manifest.dsh?.profile?.bundles?.includes('dsh-file-upload'), false)
+    assert.deepEqual(sent, [])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
 })
 test('会把桌面桥接插件写进 profile patch 顶部', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dsh-bridge-'))

@@ -27,6 +27,24 @@ test('自我修复会摘掉清单有、磁盘没有的社区插件', async () =>
   }
 })
 
+test('自我修复会摘掉未登记依赖的残留 bundle', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-repair-orphan-'))
+  try {
+    await mkdir(join(root, 'node_modules', 'dsh-file-upload'), { recursive: true })
+    await writeFile(join(root, 'node_modules', 'dsh-file-upload', 'package.json'), '{}', 'utf8')
+    await writeFile(join(root, 'package.json'), JSON.stringify({
+      dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', 'dsh-file-upload'] } },
+      dependencies: {},
+    }), 'utf8')
+    const removed = await repairBrokenProfile(root)
+    assert.deepEqual(removed, ['dsh-file-upload'])
+    const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')) as { dsh?: { profile?: { bundles?: string[] } } }
+    assert.deepEqual(manifest.dsh?.profile?.bundles, ['@deepseek-ai/dsh-base'])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('启动因缺 bundle 失败时会摘掉坏项并重试', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dsh-repair-retry-'))
   try {
@@ -34,6 +52,7 @@ test('启动因缺 bundle 失败时会摘掉坏项并重试', async () => {
     await writeFile(join(root, 'node_modules', 'dsh-file-upload', 'package.json'), '{}', 'utf8')
     await writeFile(join(root, 'package.json'), JSON.stringify({
       dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', 'dsh-file-upload'] } },
+      dependencies: { 'dsh-file-upload': '1.0.0' },
     }), 'utf8')
     let attempts = 0
     const started = await startWithProfileSelfRepair({

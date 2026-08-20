@@ -111,10 +111,7 @@ export function createDesktopHostServices(options: DesktopHostOptions) {
     }
     const handle = (options.runner ?? runBundledPnpm)(args, invokingDir, signal)
     void handle.done.then(async (outcome) => {
-      if (outcome.exitCode !== 0) {
-        await finalizeProfileBundlesAfterInstall(options.profileDir)
-        return
-      }
+      if (outcome.exitCode !== 0) return
       const isInstalled = options.isInstalled ?? ((packageName) => existsSync(join(options.profileDir, 'node_modules', ...packageName.split('/'), 'package.json')))
       await finalizeProfileBundlesAfterInstall(options.profileDir)
       if (!shouldRecycleAfterPluginResult(args, isInstalled)) return
