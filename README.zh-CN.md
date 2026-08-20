@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/branding/dsh-codex-desktop-banner.png" alt="DSH Codex Desktop 产品横幅" width="100%">
+  <img src="assets/branding/dsh-codex-desktop-banner.webp" alt="DSH Codex Desktop 产品横幅" width="100%">
 </p>
 
 <div align="center">
