@@ -172,6 +172,14 @@ test('Windows 冒烟检查使用实际产品可执行文件名', async () => {
   assert.match(workflow, /release\\win-unpacked\\DSH Codex Desktop\.exe/)
 })
 
+test('Windows 冒烟在启动应用前复用安装器的运行时解压入口', async () => {
+  const script = await readFile(new URL('../../scripts/smoke-package.ps1', import.meta.url), 'utf8')
+  const extractAt = script.indexOf('extract-runtime.mjs')
+  const startAt = script.indexOf('Start-Process')
+  assert.notEqual(extractAt, -1)
+  assert.equal(extractAt < startAt, true)
+})
+
 test('打包态从 desktop-bridge 加载 DSH 主进程模块', async () => {
   const main = await readFile(new URL('../../src/main.ts', import.meta.url), 'utf8')
   const host = await readFile(new URL('../../src/desktop-host.ts', import.meta.url), 'utf8')

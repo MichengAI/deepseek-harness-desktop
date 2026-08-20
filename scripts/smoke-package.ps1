@@ -9,6 +9,14 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = 'Stop'
 
 $resolvedApplication = (Resolve-Path -LiteralPath $ApplicationPath).Path
+$installDir = Split-Path -Parent $resolvedApplication
+$resourcesDir = Join-Path $installDir 'resources'
+$bundledNode = Join-Path $resourcesDir 'node\node.exe'
+$runtimeExtractor = Join-Path $resourcesDir 'extract-runtime.mjs'
+if ((Test-Path -LiteralPath $bundledNode) -and (Test-Path -LiteralPath $runtimeExtractor)) {
+  & $bundledNode $runtimeExtractor $installDir $resourcesDir
+  if ($LASTEXITCODE -ne 0) { throw "随包运行时解压失败，退出码：$LASTEXITCODE" }
+}
 $application = Start-Process -FilePath $resolvedApplication -PassThru
 $bootstrapProcessId = $null
 
@@ -38,7 +46,11 @@ try {
   $assetResponse = Invoke-WebRequest -Uri "$baseUrl$($asset.Groups['path'].Value)" -UseBasicParsing
   if ($assetResponse.StatusCode -ne 200) { throw "前端资源返回 HTTP $($assetResponse.StatusCode)。" }
 } finally {
-  if (-not $application.HasExited) { Stop-Process -Id $application.Id -Force }
+  $application.Refresh()
+  if (-not $application.HasExited) {
+    Stop-Process -Id $application.Id -Force -ErrorAction SilentlyContinue
+    $application.WaitForExit(10000) | Out-Null
+  }
   if ($null -ne $bootstrapProcessId) {
     $deadline = (Get-Date).AddSeconds(10)
     while ((Get-Date) -lt $deadline -and (Get-Process -Id $bootstrapProcessId -ErrorAction SilentlyContinue)) {

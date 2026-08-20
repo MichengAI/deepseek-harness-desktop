@@ -22,15 +22,19 @@ export function isNotarizationConfigured(
   return Boolean(appleId && appleIdPassword && teamId)
 }
 
+export function assertNotarizationConfigured(appleId?: string, appleIdPassword?: string, teamId?: string): void {
+  if (!isNotarizationConfigured(appleId, appleIdPassword, teamId)) {
+    throw new Error('正式标签发布必须配置完整的 Apple 公证凭据。')
+  }
+}
+
 export default async function notarizeApplication(context: AfterSignContext): Promise<void> {
   if (process.platform !== 'darwin' || !isNotarizationRequired()) return
   const appleId = process.env.APPLE_ID
   const appleIdPassword = process.env.APPLE_APP_SPECIFIC_PASSWORD
   const teamId = process.env.APPLE_TEAM_ID
-  if (!isNotarizationConfigured(appleId, appleIdPassword, teamId) || !appleId || !appleIdPassword || !teamId) {
-    console.warn('未配置 Apple 公证凭据，继续生成未公证的 macOS 测试版。')
-    return
-  }
+  assertNotarizationConfigured(appleId, appleIdPassword, teamId)
+  if (!appleId || !appleIdPassword || !teamId) return
 
   await notarize({
     appPath: join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`),

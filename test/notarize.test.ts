@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { isNotarizationConfigured, isNotarizationRequired } from '../scripts/notarize.mjs'
+import { assertNotarizationConfigured, isNotarizationConfigured, isNotarizationRequired } from '../scripts/notarize.mjs'
 
 test('仅标签发布要求 macOS 公证', () => {
   assert.equal(isNotarizationRequired('refs/heads/main'), false)
@@ -12,4 +12,6 @@ test('仅凭据完整时执行 macOS 公证', () => {
   assert.equal(isNotarizationConfigured(undefined, undefined, undefined), false)
   assert.equal(isNotarizationConfigured('user@example.com', 'password', undefined), false)
   assert.equal(isNotarizationConfigured('user@example.com', 'password', 'TEAMID'), true)
+  assert.throws(() => assertNotarizationConfigured(undefined, undefined, undefined), /正式标签发布必须配置/)
+  assert.doesNotThrow(() => assertNotarizationConfigured('user@example.com', 'password', 'TEAMID'))
 })
