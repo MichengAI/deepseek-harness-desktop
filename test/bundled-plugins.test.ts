@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { BUNDLED_PLUGINS, OFFICIAL_DSH_VERSION, OFFICIAL_LAUNCH_PEERS, OFFICIAL_RUNTIME, compareReleaseVersions, officialDshVersionOverrides, officialRuntimeDependencies, officialRuntimePnpmConfig, planOfficialRuntimeTarget, pnpmAllowBuildsManifest, pnpmWorkspaceYaml, SUITE_PACKAGE, bundledPluginNames, seededPackageNames } from '../src/bundled-plugins.js'
+import { BUNDLED_PLUGINS, OFFICIAL_DSH_VERSION, OFFICIAL_LAUNCH_PEERS, OFFICIAL_RUNTIME, compareReleaseVersions, isDeepSeekOfficialPackage, isOfficialDshPackage, officialDshVersionOverrides, officialRuntimeDependencies, officialRuntimePnpmConfig, planOfficialRuntimeTarget, pnpmAllowBuildsManifest, pnpmWorkspaceYaml, SUITE_PACKAGE, bundledPluginNames, seededPackageNames } from '../src/bundled-plugins.js'
 
 test('内置目录包含六个社区插件和插件市场', () => {
   assert.deepEqual(bundledPluginNames(), [
@@ -15,6 +15,13 @@ test('内置目录包含六个社区插件和插件市场', () => {
   ])
   assert.equal(BUNDLED_PLUGINS.length, 7)
   assert.equal(SUITE_PACKAGE, '@michengai/dsh-codex-suite')
+})
+
+test('所有 DeepSeek 官方作用域包使用同一套隔离判定', () => {
+  assert.equal(isOfficialDshPackage('@deepseek-ai/dsh'), true)
+  assert.equal(isOfficialDshPackage('@deepseek-ai/cordis-plugin-group'), false)
+  assert.equal(isDeepSeekOfficialPackage('@deepseek-ai/cordis-plugin-group'), true)
+  assert.equal(isDeepSeekOfficialPackage('@michengai/dsh-codex-ui'), false)
 })
 
 test('每个内置插件都钉死精确版本', () => {

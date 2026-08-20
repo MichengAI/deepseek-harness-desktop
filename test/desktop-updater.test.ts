@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
-import { buildDesktopTrayItems, DESKTOP_UPDATE_WARNING, desktopUpdatePrompt, publicDesktopUpdateError } from '../src/desktop-updater.js'
+import { buildDesktopTrayItems, DESKTOP_UPDATE_WARNING, desktopUpdateChannel, desktopUpdatePrompt, publicDesktopUpdateError } from '../src/desktop-updater.js'
 
 test('开发态和空闲态都提供手动检查，不自动下载', () => {
   const idle = buildDesktopTrayItems({ status: { kind: 'idle' }, currentVersion: '0.1.4', packaged: true })
@@ -33,11 +33,17 @@ test('下载完成后托盘改为安装并重启', () => {
   assert.equal(items.some(item => item.id === 'install' && item.label.includes('0.1.5')), true)
 })
 
-test('更新说明必须提示会替换官方运行时', () => {
+test('更新说明描述桌面应用更新，不混用官方运行时警告', () => {
   const text = desktopUpdatePrompt({ kind: 'available', version: '0.1.5', releaseNotes: '修复托盘' })
   assert.match(text, /0\.1\.5/)
   assert.match(text, new RegExp(DESKTOP_UPDATE_WARNING))
   assert.match(text, /修复托盘/)
+})
+
+test('macOS 更新通道按 CPU 架构隔离', () => {
+  assert.equal(desktopUpdateChannel('darwin', 'arm64'), 'latest-arm64')
+  assert.equal(desktopUpdateChannel('darwin', 'x64'), 'latest-x64')
+  assert.equal(desktopUpdateChannel('win32', 'x64'), undefined)
 })
 
 test('更新错误不得回传本地路径', () => {

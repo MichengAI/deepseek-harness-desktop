@@ -54,36 +54,41 @@ function waitForReady(child: ChildProcess, timeoutMs: number): Promise<string> {
     let capturedOutput = ''
     let checkingHealth = false
     let settled = false
+    let timeout: ReturnType<typeof setTimeout>
     const finish = (callback: () => void): void => {
       if (settled) return
       settled = true
       clearTimeout(timeout)
       callback()
     }
+    const fail = (error: Error): void => {
+      if (settled) return
+      settled = true
+      clearTimeout(timeout)
+      void stopChild(child).then(() => reject(error), () => reject(error))
+    }
     const capture = (chunk: Buffer): void => {
       capturedOutput = (capturedOutput + chunk.toString('utf8')).slice(-maxCapturedOutputLength)
       const url = parseReadyUrl(capturedOutput)
       if (url === undefined || checkingHealth) return
       checkingHealth = true
+      clearTimeout(timeout)
       void waitForHttpHealth(url, timeoutMs)
         .then(() => finish(() => resolve(url)))
-        .catch(() => finish(() => reject(new Error('DSH 启动失败：本机 HTTP 服务未通过健康检查。'))))
+        .catch(() => fail(new Error('DSH 启动失败：本机 HTTP 服务未通过健康检查。')))
     }
-    const timeout = setTimeout(() => {
-      finish(() => {
-        void stopChild(child)
-        reject(new Error('DSH 启动超时。'))
-      })
+    timeout = setTimeout(() => {
+      fail(new Error('DSH 启动超时。'))
     }, timeoutMs)
 
     if (child.stdout === null || child.stderr === null) {
-      finish(() => reject(new Error('DSH 无法建立标准输出管道。')))
+      fail(new Error('DSH 无法建立标准输出管道。'))
       return
     }
 
     child.stdout.on('data', capture)
     child.stderr.on('data', capture)
-    child.once('error', () => finish(() => reject(new Error('DSH 无法启动。'))))
+    child.once('error', () => fail(new Error('DSH 无法启动。')))
     child.once('exit', code => {
       if (settled) return
       finish(() => reject(new Error(formatEarlyExitMessage(code, capturedOutput))))
@@ -117,7 +122,7 @@ function createServer(child: ChildProcess, url: string, onUnexpectedExit?: (mess
 
 /** 通过 IPC 请求上游 DSH 优雅退出，超时后才强制结束本启动器创建的 PID。 */
 function stopChild(child: ChildProcess): Promise<void> {
-  if (child.exitCode !== null || child.killed) return Promise.resolve()
+  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve()
 
   return new Promise(resolve => {
     let settled = false
@@ -128,18 +133,28 @@ function stopChild(child: ChildProcess): Promise<void> {
       resolve()
     }
     const forceTimer = setTimeout(() => {
-      if (child.exitCode === null && !child.killed) child.kill()
+      if (child.exitCode === null && child.signalCode === null) forceKillChild(child)
     }, shutdownTimeoutMs)
 
     child.once('exit', finish)
     if (child.connected && child.send !== undefined) {
       child.send('shutdown', error => {
-        if (error !== null) child.kill()
+        if (error !== null) forceKillChild(child)
       })
       return
     }
-    child.kill()
+    child.kill('SIGTERM')
   })
+}
+
+function forceKillChild(child: ChildProcess): void {
+  if (child.exitCode !== null || child.signalCode !== null) return
+  if (process.platform === 'win32' && child.pid !== undefined) {
+    const killer = spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], { stdio: 'ignore', windowsHide: true })
+    killer.once('error', () => { child.kill('SIGKILL') })
+    return
+  }
+  child.kill('SIGKILL')
 }
 
 function formatEarlyExitMessage(code: number | null, capturedOutput: string): string {

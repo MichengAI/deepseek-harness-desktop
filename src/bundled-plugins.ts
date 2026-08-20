@@ -54,6 +54,10 @@ export function isOfficialDshPackage(packageName: string): boolean {
   return packageName === '@deepseek-ai/dsh' || packageName.startsWith('@deepseek-ai/dsh-')
 }
 
+export function isDeepSeekOfficialPackage(packageName: string): boolean {
+  return packageName.startsWith('@deepseek-ai/')
+}
+
 export function officialDshVersionOverrides(version = OFFICIAL_DSH_VERSION): Record<string, string> {
   return {
     '@deepseek-ai/dsh': version,

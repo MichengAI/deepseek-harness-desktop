@@ -20,7 +20,7 @@ import { applyInitialWindowState } from './window-state.js'
 import { installDesktopBridge, resolveDesktopBridgeDir } from './desktop-host.js'
 import { watchProfileActivation } from './profile-watch.js'
 import updater from 'electron-updater'
-import { buildDesktopTrayItems, desktopUpdatePrompt, publicDesktopUpdateError, type DesktopUpdateStatus } from './desktop-updater.js'
+import { buildDesktopTrayItems, desktopUpdateChannel, desktopUpdatePrompt, publicDesktopUpdateError, type DesktopUpdateStatus } from './desktop-updater.js'
 
 interface DshProcessModule {
   isApplyPluginUpdatesIpc: (message: unknown) => boolean
@@ -54,6 +54,7 @@ if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
   app.on('second-instance', () => showMainWindow())
+  app.on('activate', () => showMainWindow())
   app.on('before-quit', event => {
     if (isQuitting) return
     event.preventDefault()
@@ -97,14 +98,15 @@ async function startApplication(): Promise<void> {
       resourcesPath: process.resourcesPath,
     }
     const pathPrefix = resolvePluginBinDir(runtimeOptions)
+    const pnpmEntry = pathPrefix === undefined ? process.env.npm_execpath : join(pathPrefix, 'pnpm-package', 'bin', 'pnpm.cjs')
     const profileDir = resolveWebProfileDir()
     const desktopRuntimeDir = resolveDesktopRuntimeDir(app.getPath('userData'), {
       isPackaged: app.isPackaged,
       execPath: process.execPath,
     })
-    const extractedStoreDir = app.isPackaged ? join(dirname(process.execPath), 'plugins', 'store') : undefined
+    const extractedStoreDir = app.isPackaged ? join(dirname(desktopRuntimeDir), 'plugins', 'store') : undefined
     if (app.isPackaged) {
-      extractPackagedRuntimes(process.resourcesPath, dirname(process.execPath))
+      extractPackagedRuntimes(process.resourcesPath, desktopRuntimeDir, extractedStoreDir!)
     }
     const pluginStoreDir = resolveBundledPluginStore({
       ...runtimeOptions,
@@ -149,6 +151,7 @@ async function startApplication(): Promise<void> {
         DSH_PROFILE_DIR: profileDir,
         DSH_PROFILE_NAME: 'web',
         DSH_RUNTIME_DIR: desktopRuntimeDir,
+        ...(pnpmEntry === undefined ? {} : { DSH_PNPM_ENTRY: pnpmEntry }),
       },
     }
     lastStartOptions = startOptions
@@ -338,6 +341,11 @@ function createWindow(): BrowserWindow {
     event.preventDefault()
     if (isExternalHttpUrl(url, allowedOrigin)) void shell.openExternal(url)
   })
+  window.webContents.on('will-redirect', (event, url) => {
+    if (isSameOrigin(url, allowedOrigin)) return
+    event.preventDefault()
+    if (isExternalHttpUrl(url, allowedOrigin)) void shell.openExternal(url)
+  })
   applyInitialWindowState(window)
   window.on('close', event => {
     if (!shouldHideInsteadOfClose(isQuitting)) return
@@ -353,6 +361,11 @@ function createWindow(): BrowserWindow {
 function configureDesktopUpdater(): void {
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = false
+  const channel = desktopUpdateChannel()
+  if (channel !== undefined) {
+    autoUpdater.channel = channel
+    autoUpdater.allowDowngrade = false
+  }
   autoUpdater.on('download-progress', progress => {
     updateStatus = { kind: 'downloading', percent: progress.percent }
     refreshTrayMenu()

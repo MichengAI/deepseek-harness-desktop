@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 
-import { isOfficialDshPackage } from './bundled-plugins.js'
+import { isDeepSeekOfficialPackage, isOfficialDshPackage } from './bundled-plugins.js'
 
 export const PROFILE_PENDING_UPDATES_FILE = '.dsh-pending-updates.json'
 
@@ -32,7 +32,7 @@ export function partitionPackageUpdates(updates: readonly ProfilePackageUpdate[]
   const official: ProfilePackageUpdate[] = []
   const community: ProfilePackageUpdate[] = []
   for (const item of updates) {
-    if (isOfficialDshPackage(item.packageName)) official.push(item)
+    if (isDeepSeekOfficialPackage(item.packageName)) official.push(item)
     else community.push(item)
   }
   return { official, community }
@@ -40,7 +40,7 @@ export function partitionPackageUpdates(updates: readonly ProfilePackageUpdate[]
 
 /** 官方包按同一版本升级；优先用 @deepseek-ai/dsh 的目标号。 */
 export function officialRuntimeUpdateVersion(updates: readonly ProfilePackageUpdate[]): string | undefined {
-  const official = partitionPackageUpdates(updates).official
+  const official = partitionPackageUpdates(updates).official.filter(item => isOfficialDshPackage(item.packageName))
   if (official.length === 0) return undefined
   return official.find((item) => item.packageName === '@deepseek-ai/dsh')?.version ?? official[0]?.version
 }
@@ -54,7 +54,7 @@ export function mergeProfileUpdates(input: {
   const installed = new Map(input.installed.map((item) => [item.packageName, item.version]))
   const merged = new Map<string, string>()
   for (const item of [...input.declared, ...input.pending]) {
-    if (isOfficialDshPackage(item.packageName)) continue
+    if (isDeepSeekOfficialPackage(item.packageName)) continue
     if (installed.get(item.packageName) === item.version) continue
     merged.set(item.packageName, item.version)
   }

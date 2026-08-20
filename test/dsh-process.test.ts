@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import test from 'node:test'
 import { join, resolve } from 'node:path'
+import { tmpdir } from 'node:os'
 
 import { APPLY_PLUGIN_UPDATES_IPC, DSH_WEB_LAUNCH_ARGS, isApplyPluginUpdatesIpc, startDsh, type DshServer } from '../src/dsh-process.js'
 
@@ -23,7 +25,11 @@ test('DSH 提前退出时报告错误', async () => {
 })
 
 test('DSH 未输出就绪地址时超时', async () => {
-  await assert.rejects(startFixture('silent', 100), /DSH 启动超时/)
+  await assertFixtureStoppedAfterFailure('silent', /DSH 启动超时/)
+})
+
+test('DSH 健康检查失败时会先结束子进程再报错', async () => {
+  await assertFixtureStoppedAfterFailure('unhealthy', /未通过健康检查/)
 })
 
 test('重复关闭同一 DSH 子进程是安全的', async () => {
@@ -31,14 +37,26 @@ test('重复关闭同一 DSH 子进程是安全的', async () => {
   await Promise.all([server.stop(), server.stop()])
 })
 
-function startFixture(mode: 'chunked' | 'exit' | 'healthy' | 'silent', startupTimeoutMs = 1_000): Promise<DshServer> {
+function startFixture(mode: 'chunked' | 'exit' | 'healthy' | 'silent' | 'unhealthy', startupTimeoutMs = 1_000, environment: NodeJS.ProcessEnv = {}): Promise<DshServer> {
   return startDsh({
     bootstrapPath,
-    environment: { ...process.env, DSH_FIXTURE_MODE: mode },
+    environment: { ...process.env, ...environment, DSH_FIXTURE_MODE: mode },
     nodeExecutable: process.execPath,
     runtime: { entry: fixtureEntry, root: projectRoot },
     startupTimeoutMs,
   })
+}
+
+async function assertFixtureStoppedAfterFailure(mode: 'silent' | 'unhealthy', message: RegExp): Promise<void> {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-process-'))
+  const pidFile = join(root, 'pid.txt')
+  try {
+    await assert.rejects(startFixture(mode, 100, { DSH_FIXTURE_PID_FILE: pidFile }), message)
+    const pid = Number(await readFile(pidFile, 'utf8'))
+    assert.throws(() => process.kill(pid, 0))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
 }
 
 

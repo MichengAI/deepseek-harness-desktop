@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { PassThrough } from 'node:stream'
 
-import { OFFICIAL_DSH_VERSION, isOfficialDshPackage } from './bundled-plugins.js'
+import { OFFICIAL_DSH_VERSION, isDeepSeekOfficialPackage, isOfficialDshPackage } from './bundled-plugins.js'
 import { finalizeProfileBundlesAfterInstall, officialRuntimeInstallArgs, writeOfficialRuntimeManifest } from './plugin-seed.js'
 
 const APPLY_PLUGIN_UPDATES_IPC = 'apply-plugin-updates'
@@ -55,13 +55,13 @@ export function pluginCommandPackageNames(args: readonly string[]): string[] {
 export function officialPluginCommandSpecs(args: readonly string[]): string[] {
   return args
     .filter((item) => item !== 'add' && item !== 'remove' && item !== 'uninstall' && item !== 'update' && item !== 'install' && !item.startsWith('-'))
-    .filter((item) => isOfficialDshPackage(packageNameFromSpec(item)))
+    .filter((item) => isDeepSeekOfficialPackage(packageNameFromSpec(item)))
 }
 
 export function officialPluginUpdateVersion(args: readonly string[]): string | undefined {
   const action = pluginCommandAction(args)
   if (action !== 'add' && action !== 'update' && action !== 'install') return undefined
-  const specs = officialPluginCommandSpecs(args)
+  const specs = officialPluginCommandSpecs(args).filter(item => isOfficialDshPackage(packageNameFromSpec(item)))
   if (specs.length === 0) return undefined
   const preferred = specs.find((item) => packageNameFromSpec(item) === '@deepseek-ai/dsh') ?? specs[0]
   if (preferred === undefined) return undefined
@@ -95,32 +95,27 @@ export function createDesktopHostServices(options: DesktopHostOptions) {
         setTimeout(() => {
           options.send?.(APPLY_PLUGIN_UPDATES_IPC)
         }, delay).unref?.()
-      })
+      }).catch(error => { console.error('官方运行时更新后处理失败。', error) })
       return handle
     }
-    if (officialPluginCommandSpecs(args).length > 0 && (pluginCommandAction(args) === 'remove' || options.desktopRuntimeDir === undefined)) {
-      const stdout = new PassThrough()
-      const stderr = new PassThrough()
-      stdout.end()
-      stderr.end()
-      return {
-        stdout,
-        stderr,
-        done: Promise.resolve({ exitCode: 0, signal: null }),
-        cancel: () => undefined,
-      }
+    if (officialPluginCommandSpecs(args).length > 0) {
+      const message = pluginCommandAction(args) === 'remove'
+        ? '官方运行时由桌面端统一管理，不能从插件市场卸载。\n'
+        : '官方依赖随桌面运行时统一更新，不能单独安装到 Web profile。\n'
+      return completedPnpmHandle(1, message)
     }
     const handle = (options.runner ?? runBundledPnpm)(args, invokingDir, signal)
     void handle.done.then(async (outcome) => {
       if (outcome.exitCode !== 0) return
       const isInstalled = options.isInstalled ?? ((packageName) => existsSync(join(options.profileDir, 'node_modules', ...packageName.split('/'), 'package.json')))
-      await finalizeProfileBundlesAfterInstall(options.profileDir)
+      const packageNames = pluginCommandPackageNames(args)
+      await finalizeProfileBundlesAfterInstall(options.profileDir, [], packageNames.length === 0 ? undefined : packageNames)
       if (!shouldRecycleAfterPluginResult(args, isInstalled)) return
       const delay = options.recycleDelayMs ?? 400
       setTimeout(() => {
         options.send?.(APPLY_PLUGIN_UPDATES_IPC)
       }, delay).unref?.()
-    })
+    }).catch(error => { console.error('插件安装后处理失败。', error) })
     return handle
   }
   return {
@@ -148,12 +143,15 @@ export function createDesktopHostServices(options: DesktopHostOptions) {
   }
 }
 function runBundledPnpm(args: readonly string[], cwd: string, signal?: AbortSignal): DesktopPnpmHandle {
+  const pnpmEntry = process.env.DSH_PNPM_ENTRY ?? process.env.npm_execpath
+  if (pnpmEntry === undefined || !existsSync(pnpmEntry)) {
+    return completedPnpmHandle(127, '未找到 pnpm 入口，无法执行插件操作。\n')
+  }
   const stdout = new PassThrough()
   const stderr = new PassThrough()
-  const child: ChildProcess = spawn(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', [...args], {
+  const child: ChildProcess = spawn(process.execPath, [pnpmEntry, ...args], {
     cwd,
     env: process.env,
-    shell: process.platform === 'win32',
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
   })
@@ -177,6 +175,21 @@ function runBundledPnpm(args: readonly string[], cwd: string, signal?: AbortSign
   }
 }
 
+function completedPnpmHandle(exitCode: number, message = ''): DesktopPnpmHandle {
+  const stdout = new PassThrough()
+  const stderr = new PassThrough()
+  queueMicrotask(() => {
+    stdout.end()
+    stderr.end(message)
+  })
+  return {
+    stdout,
+    stderr,
+    done: Promise.resolve({ exitCode, signal: null }),
+    cancel: () => undefined,
+  }
+}
+
 function cancelChild(child: ChildProcess): void {
   if (child.exitCode !== null || child.killed) return
   if (process.platform === 'win32' && child.pid !== undefined) {
@@ -188,12 +201,17 @@ function cancelChild(child: ChildProcess): void {
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-const bridgeFiles = [
+export const DESKTOP_BRIDGE_FILES = [
   'desktop-bridge.mjs',
   'desktop-host.js',
+  'bundled-plugins.js',
   'dsh-process.js',
+  'plugin-seed.js',
   'plugin-toolchain.js',
+  'profile-updates.js',
   'readiness.js',
+  'runtime-archive.js',
+  'runtime-prebuilt.js',
 ] as const
 
 export function resolveDesktopBridgeDir(options: { isPackaged: boolean; appPath: string; resourcesPath: string }): string {
@@ -205,9 +223,10 @@ export function resolveDesktopBridgeDir(options: { isPackaged: boolean; appPath:
 export function installDesktopBridge(profileDir: string, sourceDir: string): void {
   const destDir = join(profileDir, 'node_modules', DESKTOP_BRIDGE_PACKAGE)
   mkdirSync(destDir, { recursive: true })
-  for (const file of bridgeFiles) {
+  for (const file of DESKTOP_BRIDGE_FILES) {
     const from = join(sourceDir, file)
-    if (existsSync(from)) copyFileSync(from, join(destDir, file))
+    if (!existsSync(from)) throw new Error(`桌面桥接文件缺失：${from}`)
+    copyFileSync(from, join(destDir, file))
   }
   writeFileSync(join(destDir, 'package.json'), `${JSON.stringify({
     name: DESKTOP_BRIDGE_PACKAGE,

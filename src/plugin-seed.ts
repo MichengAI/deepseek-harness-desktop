@@ -14,6 +14,7 @@ import {
   officialRuntimePnpmConfig,
   pnpmWorkspaceYaml,
   SUITE_PACKAGE,
+  isDeepSeekOfficialPackage,
   type BundledPlugin,
 } from './bundled-plugins.js'
 import { prependPath } from './plugin-toolchain.js'
@@ -64,7 +65,7 @@ const PROFILE_PATCH_TEMPLATE = `# Your patch layer for this dsh profile, applied
 `
 
 export function isOfficialProfileDependency(packageName: string): boolean {
-  return packageName.startsWith('@deepseek-ai/')
+  return isDeepSeekOfficialPackage(packageName)
 }
 
 export function communitySeedCatalog(catalog: readonly BundledPlugin[]): BundledPlugin[] {
@@ -458,7 +459,7 @@ async function ensureRuntimeScaffold(runtimeDir: string): Promise<void> {
   }
 }
 
-export async function reconcileProfileBundles(profileDir: string): Promise<string[]> {
+export async function reconcileProfileBundles(profileDir: string, packageNames?: readonly string[]): Promise<string[]> {
   const manifestPath = join(profileDir, 'package.json')
   if (!existsSync(manifestPath)) return []
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as {
@@ -471,7 +472,9 @@ export async function reconcileProfileBundles(profileDir: string): Promise<strin
     return (OFFICIAL_PROFILE_BUNDLES as readonly string[]).includes(name)
   })
   let changed = false
+  const allowed = packageNames === undefined ? undefined : new Set(packageNames)
   for (const packageName of Object.keys(manifest.dependencies ?? {})) {
+    if (allowed !== undefined && !allowed.has(packageName)) continue
     if (isOfficialProfileDependency(packageName) || packageName === SUITE_PACKAGE) continue
     if (!hasBundleManifest(profileDir, packageName) || bundles.includes(packageName)) continue
     bundles.push(packageName)
@@ -504,9 +507,9 @@ export async function pruneMissingProfileBundles(profileDir: string, extraDirs: 
 }
 
 /** 先认磁盘上的包，再改 bundle 列表：缺包的先摘掉，装上的再补进清单。 */
-export async function finalizeProfileBundlesAfterInstall(profileDir: string, extraDirs: readonly string[] = []): Promise<{ removed: string[]; bundles: string[] }> {
+export async function finalizeProfileBundlesAfterInstall(profileDir: string, extraDirs: readonly string[] = [], packageNames?: readonly string[]): Promise<{ removed: string[]; bundles: string[] }> {
   const removed = await pruneMissingProfileBundles(profileDir, extraDirs)
-  const bundles = await reconcileProfileBundles(profileDir)
+  const bundles = await reconcileProfileBundles(profileDir, packageNames)
   return { removed, bundles }
 }
 

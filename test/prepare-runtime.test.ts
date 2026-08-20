@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
+import { pathToFileURL } from 'node:url'
 
 import { copyWorkspacePackages, pruneStoreForPackaging, removePreparedPath, resolveBundledNodeSha256, writePnpmShims } from '../scripts/prepare-runtime.js'
+import { DESKTOP_BRIDGE_FILES } from '../src/desktop-host.js'
 
 test('按目标平台选择随包 Node 的 SHA256', () => {
   const checksums = {
@@ -175,4 +177,53 @@ test('打包态从 desktop-bridge 加载 DSH 主进程模块', async () => {
   const host = await readFile(new URL('../../src/desktop-host.ts', import.meta.url), 'utf8')
   assert.match(main, /desktop-bridge.*dsh-process\.js/)
   assert.doesNotMatch(host, /from '\.\/dsh-process\.js'/)
+})
+
+test('安装阶段解压脚本带上自己的运行依赖', async () => {
+  const manifest = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8')) as {
+    build?: { extraResources?: { from?: string; to?: string }[] }
+  }
+  assert.equal(
+    manifest.build?.extraResources?.some(item => item.from === 'dist/src/runtime-archive.js' && item.to === 'runtime-archive.js'),
+    true,
+  )
+})
+
+test('desktop-bridge 资源清单包含完整运行依赖闭包', async () => {
+  const manifest = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8')) as {
+    build?: { extraResources?: Array<{ to?: string; filter?: string[] }> }
+  }
+  const filter = manifest.build?.extraResources?.find(item => item.to === 'desktop-bridge')?.filter
+  assert.deepEqual([...(filter ?? [])].sort(), [...DESKTOP_BRIDGE_FILES].sort())
+})
+
+test('desktop-bridge 独立目录可以完成 ESM 导入', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-bridge-import-'))
+  try {
+    for (const file of DESKTOP_BRIDGE_FILES) {
+      await copyFile(new URL(`../../dist/src/${file}`, import.meta.url), join(root, file))
+    }
+    await import(`${pathToFileURL(join(root, 'desktop-host.js')).href}?test=${Date.now()}`)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('更新产物使用不会被 GitHub 改写的固定文件名', async () => {
+  const manifest = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8')) as {
+    build?: {
+      win?: { artifactName?: string }
+      mac?: { artifactName?: string }
+      linux?: { artifactName?: string }
+    }
+  }
+  assert.equal(manifest.build?.win?.artifactName, 'dsh-codex-desktop-${version}-win-${arch}.${ext}')
+  assert.equal(manifest.build?.mac?.artifactName, 'dsh-codex-desktop-${version}-mac-${arch}.${ext}')
+  assert.equal(manifest.build?.linux?.artifactName, 'dsh-codex-desktop-${version}-linux-${arch}.${ext}')
+})
+
+test('macOS 双架构使用各自的更新通道元数据', async () => {
+  const workflow = await readFile(new URL('../../.github/workflows/desktop-package.yml', import.meta.url), 'utf8')
+  assert.match(workflow, /latest-arm64-mac\.yml/)
+  assert.match(workflow, /latest-x64-mac\.yml/)
 })

@@ -14,7 +14,12 @@ export type DesktopTrayItem = {
   type: 'normal' | 'separator'
 }
 
-export const DESKTOP_UPDATE_WARNING = '这会替换安装包里的官方运行时，带图片的旧会话可能无法打开。'
+export const DESKTOP_UPDATE_WARNING = '下载完成后将重启并替换当前桌面应用，请先保存正在进行的工作。'
+
+export function desktopUpdateChannel(platform = process.platform, arch = process.arch): string | undefined {
+  if (platform !== 'darwin') return undefined
+  return arch === 'arm64' ? 'latest-arm64' : 'latest-x64'
+}
 
 /** 去掉路径和底层堆栈，避免把本机目录回给对话框。 */
 export function publicDesktopUpdateError(error: unknown): string {

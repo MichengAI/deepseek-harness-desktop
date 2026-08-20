@@ -77,6 +77,10 @@
         "to": "extract-runtime.mjs"
       },
       {
+        "from": "dist/src/runtime-archive.js",
+        "to": "runtime-archive.js"
+      },
+      {
         "from": "runtime-plugins/store.tgz",
         "to": "plugins-store.tgz"
       },
@@ -102,9 +106,14 @@
         "filter": [
           "desktop-bridge.mjs",
           "desktop-host.js",
+          "bundled-plugins.js",
           "dsh-process.js",
+          "plugin-seed.js",
           "plugin-toolchain.js",
-          "readiness.js"
+          "profile-updates.js",
+          "readiness.js",
+          "runtime-archive.js",
+          "runtime-prebuilt.js"
         ]
       }
     ],
@@ -114,7 +123,7 @@
         "nsis",
         "zip"
       ],
-      "artifactName": "${productName}-${version}-win-${arch}.${ext}"
+      "artifactName": "dsh-codex-desktop-${version}-win-${arch}.${ext}"
     },
     "mac": {
       "icon": "assets/icons/icon.icns",
@@ -123,7 +132,7 @@
         "dmg",
         "zip"
       ],
-      "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
+      "artifactName": "dsh-codex-desktop-${version}-mac-${arch}.${ext}"
     },
     "linux": {
       "category": "Development",
@@ -134,7 +143,7 @@
         "AppImage",
         "deb"
       ],
-      "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
+      "artifactName": "dsh-codex-desktop-${version}-linux-${arch}.${ext}"
     },
     "nsis": {
       "perMachine": false,

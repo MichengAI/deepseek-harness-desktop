@@ -98,6 +98,13 @@ jobs:
           pnpm test
           pnpm run dist -- ${{ matrix.buildArguments }}
 
+          if ('${{ matrix.platform }}' -eq 'macos-arm64') {
+            Move-Item -LiteralPath 'release/latest-mac.yml' -Destination 'release/latest-arm64-mac.yml'
+          }
+          if ('${{ matrix.platform }}' -eq 'macos-x64') {
+            Move-Item -LiteralPath 'release/latest-mac.yml' -Destination 'release/latest-x64-mac.yml'
+          }
+
       - name: 冒烟检查 Windows 打包应用
         if: matrix.platform == 'windows-x64'
         shell: pwsh

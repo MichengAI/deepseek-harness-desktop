@@ -1,4 +1,4 @@
-import { accessSync, constants } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
 export const DESKTOP_APP_NAME = 'DSH Codex Desktop'
@@ -24,10 +24,19 @@ export function resolveDesktopRuntimeDir(userDataDir: string, options: {
 }
 
 function canWriteDirectory(dir: string): boolean {
+  let probe: string | undefined
   try {
-    accessSync(dir, constants.W_OK)
+    probe = mkdtempSync(join(dir, '.dsh-write-test-'))
     return true
   } catch {
     return false
+  } finally {
+    if (probe !== undefined) {
+      try {
+        rmSync(probe, { recursive: true, force: true })
+      } catch {
+        // 探测目录清理失败时不改变已经得到的可写结论。
+      }
+    }
   }
 }

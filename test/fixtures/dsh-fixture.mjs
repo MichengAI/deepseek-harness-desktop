@@ -1,7 +1,12 @@
 import { createServer } from 'node:http'
+import { writeFileSync } from 'node:fs'
 
 const mode = process.env.DSH_FIXTURE_MODE
 let server
+
+if (process.env.DSH_FIXTURE_PID_FILE) {
+  writeFileSync(process.env.DSH_FIXTURE_PID_FILE, String(process.pid), 'utf8')
+}
 
 if (mode === 'exit') {
   process.stderr.write('Cannot find package @deepseek-ai/cordis-plugin-group\n')
@@ -12,7 +17,8 @@ process.on('SIGTERM', () => {
   server.close(() => process.exit(0))
 })
 
-if (mode === 'silent') {
+if (mode === 'silent' || mode === 'unhealthy') {
+  if (mode === 'unhealthy') process.stdout.write('dsh web: http://127.0.0.1:1\n')
   setInterval(() => undefined, 1_000)
 } else {
   server = createServer((request, response) => {
