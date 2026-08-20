@@ -156,6 +156,7 @@ test('打包配置显式包含 DSH 主进程依赖', async () => {
   const manifest = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8')) as {
     build?: { files?: string[] }
   }
+  assert.equal(manifest.build?.files?.includes('dist/src/**/*'), true)
   assert.equal(manifest.build?.files?.includes('dist/src/dsh-process.js'), true)
 })
 
