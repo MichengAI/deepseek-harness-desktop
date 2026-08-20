@@ -1,0 +1,56 @@
+import assert from 'node:assert/strict'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import test from 'node:test'
+
+import { parseUnresolvedBundleError, removeProfileBundle, repairBrokenProfile, startWithProfileSelfRepair } from '../src/profile-repair.js'
+
+test('能从 DSH 缺 bundle 报错里取出包名', () => {
+  const message = 'dsh: cannot resolve profile bundle "dsh-file-upload" from the dsh installation or C:\\Users\\demo\\.dsh\\profiles\\web'
+  assert.equal(parseUnresolvedBundleError(message), 'dsh-file-upload')
+})
+
+test('自我修复会摘掉清单有、磁盘没有的社区插件', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-repair-'))
+  try {
+    await writeFile(join(root, 'package.json'), JSON.stringify({
+      dependencies: { 'dsh-file-upload': '1.0.0' },
+      dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', 'dsh-file-upload'] } },
+    }), 'utf8')
+    const removed = await repairBrokenProfile(root)
+    assert.deepEqual(removed, ['dsh-file-upload'])
+    const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')) as { dsh?: { profile?: { bundles?: string[] } } }
+    assert.deepEqual(manifest.dsh?.profile?.bundles, ['@deepseek-ai/dsh-base'])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('启动因缺 bundle 失败时会摘掉坏项并重试', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-repair-retry-'))
+  try {
+    await mkdir(join(root, 'node_modules', 'dsh-file-upload'), { recursive: true })
+    await writeFile(join(root, 'node_modules', 'dsh-file-upload', 'package.json'), '{}', 'utf8')
+    await writeFile(join(root, 'package.json'), JSON.stringify({
+      dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', 'dsh-file-upload'] } },
+    }), 'utf8')
+    let attempts = 0
+    const started = await startWithProfileSelfRepair({
+      profileDir: root,
+      start: async () => {
+        attempts += 1
+        const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')) as { dsh?: { profile?: { bundles?: string[] } } }
+        if ((manifest.dsh?.profile?.bundles ?? []).includes('dsh-file-upload')) {
+          throw new Error('dsh: cannot resolve profile bundle "dsh-file-upload" from the dsh installation or ' + root)
+        }
+        return 'ok'
+      },
+    })
+    assert.equal(started.result, 'ok')
+    assert.equal(attempts, 2)
+    assert.equal(started.repaired.includes('dsh-file-upload'), true)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})

@@ -3,8 +3,15 @@ dist/
 release/
 runtime/
 runtime-node/
+runtime-plugins/
 node_modules/
 
 # 开发过程产物仅保留在本地。
 coverage/
 *.log
+
+runtime-dsh/
+runtime-dsh.tgz
+.codegraph/
+_tmp*
+System.Management.Automation.Internal.Host.InternalHost

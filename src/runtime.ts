@@ -1,19 +1,34 @@
 import { existsSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
+
+import { isOfficialRuntimeLaunchable, resolveProfileDshEntry, resolveWebProfileDir } from './plugin-seed.js'
 
 export interface DshRuntime {
   root: string
   entry: string
+  workingDirectory?: string
 }
 
 interface RuntimeResolutionOptions {
   appPath: string
   isPackaged: boolean
   resourcesPath: string
+  profileDir?: string
+  desktopRuntimeDir?: string
 }
 
-/** 查找已构建的 DSH 运行时，开发态默认使用同级仓库。 */
+/** 官方运行时走桌面独立目录，避免官方包出现在 Web profile 插件列表。 */
 export function resolveDshRuntime(options: RuntimeResolutionOptions): DshRuntime {
+  const profileDir = options.profileDir ?? resolveWebProfileDir()
+  const desktopDir = options.desktopRuntimeDir
+  if (desktopDir !== undefined && isOfficialRuntimeLaunchable(desktopDir)) {
+    return { root: desktopDir, entry: resolveProfileDshEntry(desktopDir), workingDirectory: homedir() }
+  }
+  if (isOfficialRuntimeLaunchable(profileDir)) {
+    return { root: profileDir, entry: resolveProfileDshEntry(profileDir), workingDirectory: homedir() }
+  }
+
   const candidates = [
     process.env.DSH_RUNTIME_ROOT,
     options.isPackaged ? join(options.resourcesPath, 'dsh') : undefined,
@@ -21,12 +36,16 @@ export function resolveDshRuntime(options: RuntimeResolutionOptions): DshRuntime
   ].filter((candidate): candidate is string => Boolean(candidate))
 
   for (const root of candidates) {
-    for (const entry of [join(root, 'apps', 'cli', 'lib', 'bin.js'), join(root, 'lib', 'bin.js')]) {
-      if (existsSync(entry)) return { root, entry }
+    for (const entry of [
+      join(root, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js'),
+      join(root, 'apps', 'cli', 'lib', 'bin.js'),
+      join(root, 'lib', 'bin.js'),
+    ]) {
+      if (existsSync(entry)) return { root, entry, workingDirectory: root }
     }
   }
 
-  throw new Error('未找到已构建的 DSH 运行时。请设置 DSH_RUNTIME_ROOT，或在安装包 resources\\dsh 中提供运行时。')
+  throw new Error('未找到 DSH 运行时。请先完成桌面端补种，或设置 DSH_RUNTIME_ROOT。')
 }
 
 /** 开发态使用 PATH 中的 Node，安装包优先使用随包 Node。 */

@@ -1,14 +1,35 @@
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync } from 'node:fs'
+import { chmodSync, existsSync, readFileSync } from 'node:fs'
 import { cp, mkdir, readFile, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises'
-import { join, resolve, sep } from 'node:path'
+import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { OFFICIAL_LAUNCH_PEERS, OFFICIAL_RUNTIME, officialRuntimePnpmConfig, pnpmWorkspaceYaml, STORE_PACKAGES } from '../src/bundled-plugins.js'
+import { packDirectoryToTarGz } from '../src/runtime-archive.js'
+
 const projectRoot = resolve(import.meta.dirname, '..', '..')
-const sourceRoot = resolve(process.env.DSH_RUNTIME_ROOT ?? join(projectRoot, '..', 'deepseek-harness'))
-const runtimeRoot = join(projectRoot, 'runtime')
 const nodeRoot = join(projectRoot, 'runtime-node')
+const pluginRoot = join(projectRoot, 'runtime-plugins')
+const officialRuntimeRoot = join(projectRoot, 'runtime-dsh')
+const bundledPnpmVersion = '11.20.0'
+
+export async function removePreparedPath(target: string): Promise<void> {
+  if (!existsSync(target)) return
+  try {
+    await rm(target, { force: true, maxRetries: 10, recursive: true, retryDelay: 200 })
+  } catch (error) {
+    if (process.platform !== 'win32' || !isRetryableRemoveError(error)) throw error
+    spawnSync(process.env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', `rmdir /s /q "${target}"`], { stdio: 'ignore', windowsHide: true })
+    spawnSync(process.env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', `del /f /q "${target}"`], { stdio: 'ignore', windowsHide: true })
+    if (existsSync(target)) throw error
+  }
+}
+
+function isRetryableRemoveError(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException).code
+  return code === 'ENOTEMPTY' || code === 'EBUSY' || code === 'EPERM' || code === 'EACCES'
+}
 
 export function resolveBundledNodeSha256(checksums: unknown, platform = process.platform, architecture = process.arch): string {
   if (typeof checksums !== 'object' || checksums === null || Array.isArray(checksums)) {
@@ -31,29 +52,10 @@ async function main(): Promise<void> {
   if (process.version !== expectedNodeVersion) {
     throw new Error('随包 Node 版本不匹配：需要 ' + expectedNodeVersion + '，实际 ' + process.version + '。')
   }
-  if (!existsSync(join(sourceRoot, 'apps', 'cli', 'lib', 'bin.js'))) {
-    throw new Error(`未找到已构建 DSH：${sourceRoot}`)
-  }
-  for (const target of [runtimeRoot, nodeRoot]) {
+  const officialArchive = join(projectRoot, 'runtime-dsh.tgz')
+  for (const target of [nodeRoot, pluginRoot, officialRuntimeRoot, officialArchive]) {
     if (!target.startsWith(projectRoot + sep)) throw new Error(`拒绝清理项目外路径：${target}`)
-    await rm(target, { recursive: true, force: true })
-  }
-
-  const pnpmEntry = process.env.npm_execpath
-  if (!pnpmEntry) throw new Error('未找到 pnpm 入口，必须通过 pnpm 执行运行时装配。')
-  const deployed = spawnSync(process.execPath, [
-    pnpmEntry, '--pm-on-fail=ignore', '--dir', sourceRoot, '--filter', '@deepseek-ai/dsh', 'deploy', '--legacy', '--prod',
-    '--config.node-linker=hoisted', '--config.auto-install-peers=false', '--config.link-workspace-packages=true', runtimeRoot,
-  ], { cwd: sourceRoot, stdio: 'inherit' })
-  if (deployed.status !== 0) throw new Error(`DSH 运行时部署失败（退出码 ${deployed.status ?? '未知'}）。`)
-
-  await copyWorkspacePackages(join(sourceRoot, 'vendor'), 1, runtimeRoot)
-  await copyWorkspacePackages(join(sourceRoot, 'packages'), 2, runtimeRoot)
-  await copyWorkspacePackages(join(sourceRoot, 'apps'), 1, runtimeRoot)
-  await copyWorkspacePackages(join(sourceRoot, 'native', 'landlock-run'), 1, runtimeRoot)
-  await copyWorkspacePackages(join(sourceRoot, 'native', 'landlock-run', 'packages'), 1, runtimeRoot)
-  if (!existsSync(join(runtimeRoot, 'node_modules', '@deepseek-ai', 'cordis-plugin-group'))) {
-    throw new Error('DSH 运行时缺少 cordis-plugin-group。')
+    await removePreparedPath(target)
   }
 
   const nodeExecutable = process.execPath
@@ -62,11 +64,20 @@ async function main(): Promise<void> {
   await mkdir(nodeRoot, { recursive: true })
   await cp(nodeExecutable, join(nodeRoot, process.platform === 'win32' ? 'node.exe' : 'node'))
   await writeFile(join(nodeRoot, 'node.sha256'), nodeSha256 + '\n', 'utf8')
-  console.log(`已装配 DSH 运行时：${runtimeRoot}`)
+  await stagePnpm(nodeRoot)
+  await stageBundledPlugins(pluginRoot, nodeRoot)
+  const officialStore = join(officialRuntimeRoot, '.store')
+  await stageOfficialRuntime(officialRuntimeRoot, nodeRoot, officialStore)
+  await removePreparedPath(officialStore)
+  packDirectoryToTarGz(join(pluginRoot, 'store'), join(pluginRoot, 'store.tgz'))
+  packDirectoryToTarGz(officialRuntimeRoot, join(projectRoot, 'runtime-dsh.tgz'))
   console.log(`已装配 Node 运行时：${nodeRoot}`)
+  console.log(`已装配内置插件仓库：${join(pluginRoot, 'store.tgz')}`)
+  console.log(`已装配预装官方运行时：${join(projectRoot, 'runtime-dsh.tgz')}`)
 }
+
 async function copyWorkspacePackage(sourcePackage: string, destinationPackage: string): Promise<void> {
-  await rm(destinationPackage, { recursive: true, force: true })
+  await removePreparedPath(destinationPackage)
   const nestedNodeModules = join(sourcePackage, 'node_modules')
   await cp(sourcePackage, destinationPackage, {
     dereference: false,
@@ -92,6 +103,176 @@ export async function copyWorkspacePackages(directory: string, depth: 1 | 2, des
   }
 }
 
+export function resolvePnpmPackageRoot(entry = process.env.npm_execpath): string {
+  if (entry === undefined || entry === '') throw new Error('未找到 pnpm 入口，必须通过 pnpm 执行运行时装配。')
+  let current = resolve(entry)
+  for (let index = 0; index < 8; index += 1) {
+    const manifestPath = join(current, 'package.json')
+    if (existsSync(manifestPath)) {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { name?: unknown }
+      if (manifest.name === 'pnpm' || manifest.name === '@pnpm/exe') return current
+    }
+    const parent = dirname(current)
+    if (parent === current) break
+    current = parent
+  }
+  throw new Error('无法从当前 pnpm 入口定位 pnpm 包装目录。')
+}
+
+export async function stagePnpm(destinationRoot: string): Promise<void> {
+  const packageRoot = await materializePnpmPackage(destinationRoot)
+  const entry = resolvePnpmEntry(packageRoot)
+  await writePnpmShims(destinationRoot, relative(packageRoot, entry).replaceAll('\\', '/'))
+}
+
+export async function writePnpmShims(destinationRoot: string, relativeEntry: string, platform = process.platform): Promise<void> {
+  const nodeName = platform === 'win32' ? 'node.exe' : 'node'
+  await writeFile(
+    join(destinationRoot, 'pnpm.cmd'),
+    `@echo off\r\n"%~dp0${nodeName}" "%~dp0pnpm-package\\${relativeEntry.replaceAll('/', '\\')}" %*\r\n`,
+    'utf8',
+  )
+  if (platform === 'win32') return
+  await writeFile(
+    join(destinationRoot, 'pnpm'),
+    `#!/bin/sh\nexec "$(dirname "$0")/${nodeName}" "$(dirname "$0")/pnpm-package/${relativeEntry}" "$@"\n`,
+    'utf8',
+  )
+  chmodSync(join(destinationRoot, 'pnpm'), 0o755)
+}
+export async function stageBundledPlugins(destinationRoot: string, nodeRoot: string): Promise<void> {
+  const storeDir = join(destinationRoot, 'store')
+  const stagingDir = join(destinationRoot, 'staging')
+  await mkdir(stagingDir, { recursive: true })
+  const stagedPackages = [...STORE_PACKAGES]
+  await writeFile(join(stagingDir, 'package.json'), JSON.stringify({
+    name: 'dsh-desktop-bundled-plugins',
+    private: true,
+    pnpm: officialRuntimePnpmConfig(),
+    dependencies: stagedPluginDependencies(stagedPackages),
+  }, undefined, 2) + '\n', 'utf8')
+  await writeFile(join(stagingDir, 'pnpm-workspace.yaml'), pnpmWorkspaceYaml(), 'utf8')
+  runStagedPnpm(nodeRoot, [
+    'install',
+    '--dir', stagingDir,
+    '--store-dir', storeDir,
+    '--prod',
+    '--config.node-linker=hoisted',
+    '--config.auto-install-peers=true',
+    '--config.minimumReleaseAge=0',
+    '--registry=https://registry.npmjs.org/',
+  ])
+  for (const plugin of stagedPackages) {
+    if (!existsSync(join(stagingDir, 'node_modules', ...plugin.packageName.split('/'), 'package.json'))) {
+      throw new Error(`内置插件装配后缺失：${plugin.packageName}`)
+    }
+  }
+  await pruneStoreForPackaging(storeDir)
+  await removePreparedPath(stagingDir)
+}
+
+
+
+/** 预装完整官方运行时，首启只需复制，避免现场 pnpm add。 */
+export async function stageOfficialRuntime(destinationRoot: string, nodeRoot: string, storeDir: string): Promise<void> {
+  if (!destinationRoot.startsWith(projectRoot + sep)) throw new Error(`拒绝写入项目外路径：${destinationRoot}`)
+  await removePreparedPath(destinationRoot)
+  await mkdir(destinationRoot, { recursive: true })
+  const packages = [OFFICIAL_RUNTIME, ...OFFICIAL_LAUNCH_PEERS]
+  await writeFile(join(destinationRoot, 'package.json'), JSON.stringify({
+    name: 'dsh-desktop-runtime',
+    private: true,
+    pnpm: officialRuntimePnpmConfig(),
+    dependencies: Object.fromEntries(packages.map(plugin => [plugin.packageName, plugin.version])),
+  }, undefined, 2) + '\n', 'utf8')
+  await writeFile(join(destinationRoot, 'pnpm-workspace.yaml'), pnpmWorkspaceYaml(), 'utf8')
+  const installArgs = [
+    'install',
+    '--dir', destinationRoot,
+    '--store-dir', storeDir,
+    '--prod',
+    '--config.node-linker=hoisted',
+    '--config.auto-install-peers=true',
+    '--config.package-import-method=copy',
+    '--config.minimumReleaseAge=0',
+    '--registry=https://registry.npmjs.org/',
+  ]
+  try {
+    runStagedPnpm(nodeRoot, [...installArgs, '--offline'])
+  } catch {
+    runStagedPnpm(nodeRoot, installArgs)
+  }
+  const entry = join(destinationRoot, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js')
+  if (!existsSync(entry)) throw new Error('预装官方运行时后仍未找到入口。')
+  for (const plugin of packages) {
+    if (!existsSync(join(destinationRoot, 'node_modules', ...plugin.packageName.split('/'), 'package.json'))) {
+      throw new Error(`预装官方运行时缺少依赖：${plugin.packageName}`)
+    }
+  }
+}
+
+function stagedPluginDependencies(plugins: readonly { packageName: string; version: string }[]): Record<string, string> {
+  const dependencies = Object.fromEntries(plugins.map(plugin => [plugin.packageName, plugin.version]))
+  const localUi = resolve(projectRoot, '..', 'dsh-codex-ui')
+  const manifestPath = join(localUi, 'package.json')
+  if (!existsSync(manifestPath)) return dependencies
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { name?: unknown }
+  if (manifest.name !== '@michengai/dsh-codex-ui') return dependencies
+  dependencies['@michengai/dsh-codex-ui'] = 'file:' + localUi
+  return dependencies
+}
+export async function pruneStoreForPackaging(storeDir: string): Promise<void> {
+  const projects = join(storeDir, 'v11', 'projects')
+  if (existsSync(projects)) await removePreparedPath(projects)
+}
+
+async function materializePnpmPackage(destinationRoot: string): Promise<string> {
+  const destination = join(destinationRoot, 'pnpm-package')
+  await mkdir(destination, { recursive: true })
+  try {
+    await cp(resolvePnpmPackageRoot(), destination, { dereference: true, recursive: true })
+    resolvePnpmEntry(destination)
+    return destination
+  } catch {
+    const packDir = join(destinationRoot, '.pnpm-pack')
+    await mkdir(packDir, { recursive: true })
+    const packed = runCurrentPnpm(['pack', `pnpm@${bundledPnpmVersion}`, '--pack-destination', packDir])
+    const archive = packed.stdout.split(/\r?\n/).map(line => line.trim()).find(line => line.endsWith('.tgz'))
+    if (archive === undefined) throw new Error('下载随包 pnpm 失败。')
+    const extracted = spawnSync('tar', ['-xzf', join(packDir, archive), '-C', packDir], { encoding: 'utf8' })
+    if (extracted.status !== 0) throw new Error('解压随包 pnpm 失败。')
+    await removePreparedPath(destination)
+    await cp(join(packDir, 'package'), destination, { dereference: true, recursive: true })
+    await removePreparedPath(packDir)
+    return destination
+  }
+}
+
+function resolvePnpmEntry(packageRoot: string): string {
+  const manifest = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8')) as { bin?: string | Record<string, string> }
+  const declared = typeof manifest.bin === 'string' ? manifest.bin : manifest.bin?.pnpm
+  const candidates = [declared, 'bin/pnpm.cjs', 'dist/pnpm.cjs', 'bin/pnpm.js'].filter((item): item is string => Boolean(item))
+  for (const candidate of candidates) {
+    const entry = join(packageRoot, candidate)
+    if (existsSync(entry)) return entry
+  }
+  throw new Error(`随包 pnpm 入口不存在：${packageRoot}`)
+}
+
+function runStagedPnpm(nodeRoot: string, args: readonly string[]): void {
+  const nodeExecutable = join(nodeRoot, process.platform === 'win32' ? 'node.exe' : 'node')
+  const result = spawnSync(nodeExecutable, [resolvePnpmEntry(join(nodeRoot, 'pnpm-package')), ...args], { stdio: 'inherit' })
+  if (result.status !== 0) throw new Error(`随包 pnpm 执行失败（退出码 ${result.status ?? '未知'}）。`)
+}
+
+function runCurrentPnpm(args: readonly string[]): { stdout: string } {
+  const pnpmEntry = process.env.npm_execpath
+  if (!pnpmEntry) throw new Error('未找到 pnpm 入口，必须通过 pnpm 执行运行时装配。')
+  const result = spawnSync(process.execPath, [pnpmEntry, ...args], { encoding: 'utf8' })
+  if (result.status !== 0) throw new Error(`pnpm ${args[0]} 失败（退出码 ${result.status ?? '未知'}）。`)
+  return { stdout: result.stdout ?? '' }
+}
+
 async function findDirectories(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true })
   const directories: string[] = []
@@ -107,3 +288,5 @@ async function isDirectory(entry: { isDirectory(): boolean, isSymbolicLink(): bo
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main()
+
+

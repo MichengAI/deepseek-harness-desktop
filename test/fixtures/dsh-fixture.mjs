@@ -3,7 +3,10 @@ import { createServer } from 'node:http'
 const mode = process.env.DSH_FIXTURE_MODE
 let server
 
-if (mode === 'exit') process.exit(1)
+if (mode === 'exit') {
+  process.stderr.write('Cannot find package @deepseek-ai/cordis-plugin-group\n')
+  process.exit(1)
+}
 process.on('SIGTERM', () => {
   if (server === undefined) process.exit(0)
   server.close(() => process.exit(0))

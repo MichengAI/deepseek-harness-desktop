@@ -50,50 +50,14 @@ jobs:
         with:
           version: 11.20.0
 
-      - name: 检出固定 DSH 源码
-        uses: actions/checkout@v4
-        with:
-          repository: deepseek-ai/deepseek-harness
-          ref: 47f943859bef60e4160492346772ded9b24f765a
-          path: upstream
-
-      - name: 构建 DSH
-        shell: pwsh
-        working-directory: upstream
-        run: |
-          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-          $OutputEncoding = [System.Text.Encoding]::UTF8
-          $logDirectory = Join-Path $env:GITHUB_WORKSPACE 'ci-logs'
-          $logPath = Join-Path $logDirectory 'dsh-build.log'
-          New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
-          & npm exec --yes --package=pnpm@11.7.0 -- pnpm install --frozen-lockfile 2>&1 | Tee-Object -FilePath $logPath
-          $exitCode = $LASTEXITCODE
-          if ($exitCode -ne 0) { exit $exitCode }
-          & npm exec --yes --package=pnpm@11.7.0 -- pnpm run build 2>&1 | Tee-Object -FilePath $logPath -Append
-          $exitCode = $LASTEXITCODE
-          if ($exitCode -ne 0) { exit $exitCode }
-
-      - name: 上传 DSH 构建日志
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dsh-build-log-${{ matrix.platform }}
-          path: ci-logs/dsh-build.log
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: 构建 Linux 原生 Landlock 启动器
+      - name: 安装 Linux 冒烟依赖
         if: matrix.platform == 'linux-x64'
         shell: pwsh
-        working-directory: upstream/native/landlock-run
         run: |
           [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
           $OutputEncoding = [System.Text.Encoding]::UTF8
           sudo apt-get update -q
-          sudo apt-get install -yq musl-tools xvfb lsof
-          pnpm run build:ts
-          pnpm run build:native
-
+          sudo apt-get install -yq xvfb lsof
       - name: 导入 macOS 签名证书
         if: startsWith(matrix.platform, 'macos-') && startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
@@ -132,7 +96,6 @@ jobs:
           $OutputEncoding = [System.Text.Encoding]::UTF8
           pnpm install --frozen-lockfile
           pnpm test
-          $env:DSH_RUNTIME_ROOT = Join-Path $env:GITHUB_WORKSPACE 'upstream'
           pnpm run dist -- ${{ matrix.buildArguments }}
 
       - name: 冒烟检查 Windows 打包应用
@@ -141,7 +104,7 @@ jobs:
         run: |
           [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
           $OutputEncoding = [System.Text.Encoding]::UTF8
-          .\scripts\smoke-package.ps1 -ApplicationPath 'release\win-unpacked\DeepSeek Harness Desktop.exe'
+          .\scripts\smoke-package.ps1 -ApplicationPath 'release\win-unpacked\dsh-codex-desktop.exe'
 
       - name: 冒烟检查 macOS 打包应用
         if: startsWith(matrix.platform, 'macos-')
@@ -159,7 +122,7 @@ jobs:
         run: |
           [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
           $OutputEncoding = [System.Text.Encoding]::UTF8
-          $applicationPath = Join-Path $env:GITHUB_WORKSPACE 'release/linux-unpacked/deepseek-harness-desktop'
+          $applicationPath = Join-Path $env:GITHUB_WORKSPACE 'release/linux-unpacked/dsh-codex-desktop'
           if (-not (Test-Path -LiteralPath $applicationPath -PathType Leaf)) { throw '未找到 Linux 应用可执行文件。' }
           & xvfb-run -a pnpm run smoke:linux -- --application-path $applicationPath
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

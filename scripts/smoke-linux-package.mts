@@ -66,7 +66,7 @@ async function waitForHealthyServer(application: ChildProcess, getApplicationOut
 
 function readStartupError(): string | undefined {
   const appDataPath = process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config')
-  const logPath = join(appDataPath, 'deepseek-harness-desktop', 'startup-error.log')
+  const logPath = join(appDataPath, 'DSH Codex Desktop', 'startup-error.log')
   if (!existsSync(logPath)) return undefined
   return readFileSync(logPath, 'utf8').trim()
 }

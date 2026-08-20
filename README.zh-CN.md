@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/MichengAI/deepseek-harness-desktop/releases">下载</a> ·
-  <a href="https://github.com/MichengAI/deepseek-harness-desktop/issues">反馈问题</a>
+  <a href="https://github.com/MichengAI/dsh-codex-desktop/releases">下载</a> ·
+  <a href="https://github.com/MichengAI/dsh-codex-desktop/issues">反馈问题</a>
 </p>
 
 <p align="center">
@@ -18,9 +18,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/MichengAI/deepseek-harness-desktop/releases"><img src="https://img.shields.io/github/v/release/MichengAI/deepseek-harness-desktop?display_name=tag&label=release" alt="发布版本"></a>
+  <a href="https://github.com/MichengAI/dsh-codex-desktop/releases"><img src="https://img.shields.io/github/v/release/MichengAI/dsh-codex-desktop?display_name=tag&label=release" alt="发布版本"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="Apache License 2.0 许可证"></a>
-  <a href="https://github.com/MichengAI/deepseek-harness-desktop/actions/workflows/desktop-package.yml"><img src="https://github.com/MichengAI/deepseek-harness-desktop/actions/workflows/desktop-package.yml/badge.svg?branch=main" alt="桌面端打包"></a>
+  <a href="https://github.com/MichengAI/dsh-codex-desktop/actions/workflows/desktop-package.yml"><img src="https://github.com/MichengAI/dsh-codex-desktop/actions/workflows/desktop-package.yml/badge.svg?branch=main" alt="桌面端打包"></a>
   <img src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-000000?logo=apple&logoColor=white" alt="macOS Apple Silicon 与 Intel">
   <img src="https://img.shields.io/badge/Windows-x64-0078D4?logo=windows&logoColor=white" alt="Windows x64">
   <img src="https://img.shields.io/badge/Linux-x64-FCC624?logo=linux&logoColor=black" alt="Linux x64">
@@ -36,18 +36,18 @@ DeepSeek Harness Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/d
 
 ## 下载
 
-请从 [GitHub Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases) 下载对应平台的安装包。
+请从 [GitHub Releases](https://github.com/MichengAI/dsh-codex-desktop/releases) 下载对应平台的安装包。
 
 | 平台 | 文件 | 发布状态 |
 | --- | --- | --- |
-| Windows x64 | **.exe** 安装器 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-win-x64.exe) |
-| Windows x64 | **.zip** 压缩包 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-win-x64.zip) |
-| macOS Apple Silicon | **.dmg** 安装器 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-mac-arm64.dmg) |
-| macOS Intel | **.dmg** 安装器 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-mac-x64.dmg) |
-| Linux x64 | **.AppImage** | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-linux-x86_64.AppImage) |
-| Debian / Ubuntu x64 | **.deb** 安装包 | 已发布 · [下载](https://github.com/MichengAI/deepseek-harness-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-linux-amd64.deb) |
+| Windows x64 | **.exe** 安装器 | 已发布 · [下载](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-win-x64.exe) |
+| Windows x64 | **.zip** 压缩包 | 已发布 · [下载](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-win-x64.zip) |
+| macOS Apple Silicon | **.dmg** 安装器 | 已发布 · [下载](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-mac-arm64.dmg) |
+| macOS Intel | **.dmg** 安装器 | 已发布 · [下载](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-mac-x64.dmg) |
+| Linux x64 | **.AppImage** | 已发布 · [下载](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-linux-x86_64.AppImage) |
+| Debian / Ubuntu x64 | **.deb** 安装包 | 已发布 · [下载](https://github.com/MichengAI/dsh-codex-desktop/releases/download/v0.1.4/DeepSeek.Harness.Desktop-0.1.4-linux-amd64.deb) |
 
-全部当前与历史安装包请从 [GitHub Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases) 获取。
+全部当前与历史安装包请从 [GitHub Releases](https://github.com/MichengAI/dsh-codex-desktop/releases) 获取。
 
 ## 界面预览
 
@@ -70,6 +70,7 @@ DeepSeek Harness Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/d
 - **保留 DSH 工作流**：继续使用 DSH 的工作区、会话、模型、插件和 Agent 预设能力。
 - **桌面端行为**：提供单实例保护、系统托盘控制及安全的外部链接处理。
 - **延续 CLI 数据**：沿用当前用户的 DSH 数据目录，保留既有设置和会话。
+- **随包社区插件**：首次启动把 Codex UI、IM、定时任务、技能、归档和专家六个插件写入 Web profile；之后仍可用 code-ui / dshmarket 在线安装或更新。
 
 ## 系统要求
 
@@ -82,7 +83,7 @@ DeepSeek Harness Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/d
 
 ## 安装与开始使用
 
-1. 前往 [Releases](https://github.com/MichengAI/deepseek-harness-desktop/releases) 下载对应操作系统的安装包。
+1. 前往 [Releases](https://github.com/MichengAI/dsh-codex-desktop/releases) 下载对应操作系统的安装包。
 2. Windows 运行 **.exe** 安装器；macOS 打开 **.dmg**；Linux 运行 **.AppImage** 或在 Debian / Ubuntu 安装 **.deb**，然后启动 **DeepSeek Harness Desktop**。
 3. 等待本地 DSH 服务启动，再创建或打开工作区和会话。
 4. 按需在 DSH 设置中配置模型、插件、权限和 Agent 预设。
@@ -110,14 +111,13 @@ DeepSeek Harness Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/d
 
 ## 开发
 
-开发环境需要 Windows、Node.js 24.19.0、pnpm 11.20.0，以及已构建的 DeepSeek Harness 源码。
+开发环境需要 Windows、Node.js 24.19.0 和 pnpm 11.20.0。DSH 运行时从 npm 包 @deepseek-ai/dsh 装配，不再依赖本地源码仓库。
 
 ~~~powershell
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 pnpm install --frozen-lockfile
 pnpm test
-$env:DSH_RUNTIME_ROOT = 'D:\Repository\deepseek-harness'
 pnpm run dist
 ~~~
 
@@ -129,7 +129,7 @@ pnpm run dist
 
 ## 支持与贡献
 
-- 请通过 [GitHub Issues](https://github.com/MichengAI/deepseek-harness-desktop/issues) 提交缺陷和功能建议。
+- 请通过 [GitHub Issues](https://github.com/MichengAI/dsh-codex-desktop/issues) 提交缺陷和功能建议。
 - 提交 Pull Request 前请运行测试，并保持用户可见文本使用简体中文。
 - DSH 本身的功能与文档，请参阅上游 [DeepSeek Harness 仓库](https://github.com/deepseek-ai/deepseek-harness)。
 

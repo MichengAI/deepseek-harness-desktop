@@ -3,7 +3,7 @@
   "version": "0.1.4",
   "description": "DeepSeek Harness 原生桌面启动器",
   "author": "MichengAI",
-  "desktopName": "deepseek-harness-desktop",
+  "desktopName": "DSH Codex Desktop",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
@@ -19,7 +19,8 @@
       "darwin-arm64": "27DB838BB204EF7C21DF2931F5656E4C8FB32E6E947F363A402B49714D32B5B1",
       "darwin-x64": "1052EB9C7D6C60A79B968E09F75AF55A73462B0F6DFF0964336D63B5E13EB63C",
       "linux-x64": "BC17C508FFEED0EC622934F9B7FA72F8E78DA65350E63C3ECEB56FA688AA5E12"
-    }
+    },
+    "bundledDshVersion": "0.1.0-rc.8"
   },
   "main": "dist/src/main.js",
   "scripts": {
@@ -42,7 +43,7 @@
   },
   "build": {
     "appId": "ai.micheng.deepseekHarnessDesktop",
-    "productName": "DeepSeek Harness Desktop",
+    "productName": "DSH Codex Desktop",
     "icon": "assets/icon.png",
     "asar": true,
     "afterSign": "dist/scripts/notarize.mjs",
@@ -55,20 +56,6 @@
     ],
     "extraResources": [
       {
-        "from": "runtime",
-        "to": "dsh",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "runtime/node_modules",
-        "to": "dsh/node_modules",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
         "from": "runtime-node",
         "to": "node",
         "filter": [
@@ -78,6 +65,41 @@
       {
         "from": "dist/src/dsh-bootstrap.mjs",
         "to": "bootstrap.mjs"
+      },
+      {
+        "from": "dist/src/extract-runtime.js",
+        "to": "extract-runtime.mjs"
+      },
+      {
+        "from": "runtime-plugins/store.tgz",
+        "to": "plugins-store.tgz"
+      },
+      {
+        "from": "runtime-dsh.tgz",
+        "to": "dsh-runtime.tgz"
+      },
+      {
+        "from": "assets/icon.png",
+        "to": "icon.png"
+      },
+      {
+        "from": "assets/icons/icon.ico",
+        "to": "icon.ico"
+      },
+      {
+        "from": "assets/startup.html",
+        "to": "startup.html"
+      },
+      {
+        "from": "dist/src",
+        "to": "desktop-bridge",
+        "filter": [
+          "desktop-bridge.mjs",
+          "desktop-host.js",
+          "dsh-process.js",
+          "plugin-toolchain.js",
+          "readiness.js"
+        ]
       }
     ],
     "win": {
@@ -99,7 +121,7 @@
     },
     "linux": {
       "category": "Development",
-      "executableName": "deepseek-harness-desktop",
+      "executableName": "dsh-codex-desktop",
       "maintainer": "MichengAI <coolyujiyu@qq.com>",
       "syncDesktopName": true,
       "target": [
@@ -111,7 +133,20 @@
     "nsis": {
       "perMachine": false,
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
-    }
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icons/icon.ico",
+      "uninstallerIcon": "assets/icons/icon.ico",
+      "installerHeaderIcon": "assets/icons/icon.ico",
+      "include": "build/installer.nsh",
+      "shortcutName": "DSH Codex Desktop",
+      "uninstallDisplayName": "DSH Codex Desktop"
+    },
+    "executableName": "DSH Codex Desktop",
+    "extraFiles": [
+      {
+        "from": "assets/icons/icon.ico",
+        "to": "DSH Codex Desktop.ico"
+      }
+    ]
   }
 }

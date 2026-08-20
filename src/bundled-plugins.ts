@@ -1,0 +1,133 @@
+/** 桌面端随包 npm 目录。全部写入用户 profile，便于官方包和社区包在线升级。 */
+
+export const SUITE_PACKAGE = '@michengai/dsh-codex-suite'
+
+export interface BundledPlugin {
+  packageName: string
+  version: string
+}
+
+/** 官方 DSH 家族统一锁死的版本。打包和在线升级都按这一个号对齐。 */
+export const OFFICIAL_DSH_VERSION = '0.1.0-rc.8'
+
+/** 官方 DSH 运行时。从 npm 安装，不依赖本地 deepseek-harness 源码。 */
+export const OFFICIAL_RUNTIME: BundledPlugin = {
+  packageName: '@deepseek-ai/dsh',
+  version: OFFICIAL_DSH_VERSION,
+}
+
+/** 官方运行时启动必需、但 DSH 只声明为 peer 的包。auto-install-peers=false 时不会自动装上。 */
+export const OFFICIAL_LAUNCH_PEERS: readonly BundledPlugin[] = [
+  { packageName: '@deepseek-ai/cordis-plugin-group', version: '1.0.1' },
+  { packageName: '@deepseek-ai/dsh-scope', version: OFFICIAL_DSH_VERSION },
+  { packageName: '@deepseek-ai/dsh-timeout', version: OFFICIAL_DSH_VERSION },
+  { packageName: '@deepseek-ai/dsh-invariants', version: OFFICIAL_DSH_VERSION },
+]
+/** 用户要求打进桌面端的六个社区 npm 包。 */
+export const BUNDLED_PLUGINS: readonly BundledPlugin[] = [
+  { packageName: '@michengai/dsh-codex-ui', version: '0.2.61' },
+  { packageName: '@michengai/dsh-im-connect', version: '0.1.10' },
+  { packageName: '@michengai/dsh-automation', version: '0.1.5' },
+  { packageName: '@michengai/dsh-skills-manager', version: '0.1.23' },
+  { packageName: '@michengai/dsh-archive-manager', version: '0.1.12' },
+  { packageName: '@michengai/dsh-agency-agents', version: '0.1.20' },
+]
+
+/** 离线 store 只放社区插件，官方运行时单独预装，避免安装包把同一份依赖打两遍。 */
+export const STORE_PACKAGES: readonly BundledPlugin[] = BUNDLED_PLUGINS
+
+/** 首次补种的完整清单：官方运行时 + 六个社区插件。 */
+export const SEEDED_PACKAGES: readonly BundledPlugin[] = [OFFICIAL_RUNTIME, ...BUNDLED_PLUGINS]
+
+export const OFFICIAL_PROFILE_BUNDLES = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app'] as const
+
+export function bundledPluginNames(): readonly string[] {
+  return BUNDLED_PLUGINS.map(plugin => plugin.packageName)
+}
+
+export function seededPackageNames(): readonly string[] {
+  return SEEDED_PACKAGES.map(plugin => plugin.packageName)
+}
+
+export function isOfficialDshPackage(packageName: string): boolean {
+  return packageName === '@deepseek-ai/dsh' || packageName.startsWith('@deepseek-ai/dsh-')
+}
+
+export function officialDshVersionOverrides(version = OFFICIAL_DSH_VERSION): Record<string, string> {
+  return {
+    '@deepseek-ai/dsh': version,
+    '@deepseek-ai/dsh-*': version,
+  }
+}
+
+export function officialRuntimeDependencies(version = OFFICIAL_DSH_VERSION): Record<string, string> {
+  return Object.fromEntries([
+    [OFFICIAL_RUNTIME.packageName, version],
+    ...OFFICIAL_LAUNCH_PEERS.map((plugin) => [
+      plugin.packageName,
+      plugin.packageName.startsWith('@deepseek-ai/dsh-') ? version : plugin.version,
+    ]),
+  ])
+}
+
+/** 比较官方预发布号：0.1.0-rc.8 > 0.1.0-rc.7，正式版大于同号 rc。 */
+export function compareReleaseVersions(left: string, right: string): number {
+  const parse = (value: string): { major: number; minor: number; patch: number; rc: number } | undefined => {
+    const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-rc\.(\d+))?/i.exec(value.trim())
+    if (match === null) return undefined
+    return {
+      major: Number(match[1]),
+      minor: Number(match[2]),
+      patch: Number(match[3]),
+      rc: match[4] === undefined ? Number.POSITIVE_INFINITY : Number(match[4]),
+    }
+  }
+  const a = parse(left)
+  const b = parse(right)
+  if (a === undefined || b === undefined) return left.localeCompare(right)
+  return a.major - b.major || a.minor - b.minor || a.patch - b.patch || a.rc - b.rc
+}
+
+export function planOfficialRuntimeTarget(input: {
+  installed?: string
+  aligned: boolean
+  baked: string
+  published?: string
+  pending?: string
+}): string | undefined {
+  if (input.pending !== undefined && input.pending !== '') return input.pending
+  const baseline = input.published !== undefined && compareReleaseVersions(input.published, input.baked) >= 0
+    ? input.published
+    : input.baked
+  if (input.installed === undefined || input.installed === '') return baseline
+  if (!input.aligned) return compareReleaseVersions(baseline, input.installed) >= 0 ? baseline : input.installed
+  if (compareReleaseVersions(baseline, input.installed) > 0) return baseline
+  return undefined
+}
+
+/** pnpm 11 默认拦截构建脚本；这些原生/prepare 依赖必须放行，否则装配会以 ERR_PNPM_IGNORED_BUILDS 失败。 */
+export const ALLOWED_BUILD_PACKAGES = [
+  '@deepseek-ai/dsh-subprocess-local',
+  '@google/genai',
+  'koffi',
+  'node-pty',
+  'protobufjs',
+] as const
+
+export function pnpmAllowBuildsManifest(): { onlyBuiltDependencies: string[]; allowBuilds: Record<string, true> } {
+  return { onlyBuiltDependencies: [...ALLOWED_BUILD_PACKAGES], allowBuilds: Object.fromEntries(ALLOWED_BUILD_PACKAGES.map(name => [name, true])) }
+}
+
+export function officialRuntimePnpmConfig(version = OFFICIAL_DSH_VERSION): {
+  onlyBuiltDependencies: string[]
+  allowBuilds: Record<string, true>
+  overrides: Record<string, string>
+} {
+  return { ...pnpmAllowBuildsManifest(), overrides: officialDshVersionOverrides(version) }
+}
+
+export function pnpmWorkspaceYaml(autoInstallPeers = true): string {
+  const onlyBuilt = ALLOWED_BUILD_PACKAGES.map(name => `  - ${JSON.stringify(name)}`).join('\n')
+  const allow = ALLOWED_BUILD_PACKAGES.map(name => `  ${JSON.stringify(name)}: true`).join('\n')
+  return ['packages:', '  - .', '', 'nodeLinker: hoisted', 'autoInstallPeers: ' + (autoInstallPeers ? 'true' : 'false'), 'onlyBuiltDependencies:', onlyBuilt, 'allowBuilds:', allow, ''].join('\n')
+}

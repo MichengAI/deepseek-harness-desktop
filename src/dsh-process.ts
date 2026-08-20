@@ -1,10 +1,13 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 
+import { prependPath } from './plugin-toolchain.js'
 import { parseReadyUrl } from './readiness.js'
 import type { DshRuntime } from './runtime.js'
 
+export const APPLY_PLUGIN_UPDATES_IPC = 'apply-plugin-updates'
+
 const startupTimeoutMs = 45_000
-const maxCapturedOutputLength = 4_096
+const maxCapturedOutputLength = 12_000
 const shutdownTimeoutMs = 5_000
 
 export interface DshServer {
@@ -16,25 +19,34 @@ export interface StartDshOptions {
   bootstrapPath: string
   environment?: NodeJS.ProcessEnv
   onUnexpectedExit?: (message: string) => void
+  onIpcMessage?: (message: unknown) => void
+  pathPrefix?: string
+  workingDirectory?: string
   runtime: DshRuntime
   nodeExecutable: string
   startupTimeoutMs?: number
 }
 
+/** 桌面窗口已经承载 Web UI，禁止官方 dsh-web-app 再拉起系统浏览器。 */
+export const DSH_WEB_LAUNCH_ARGS = ['web', '--port', '0', '--no-open'] as const
+
 /** 启动 DSH Web，并在收到本机就绪地址后返回。 */
 export function startDsh(options: StartDshOptions): Promise<DshServer> {
-  const child = spawn(options.nodeExecutable, [options.bootstrapPath, options.runtime.entry, 'web', '--port', '0'], {
-    cwd: options.runtime.root,
+  const child = spawn(options.nodeExecutable, [options.bootstrapPath, options.runtime.entry, ...DSH_WEB_LAUNCH_ARGS], {
+    cwd: options.workingDirectory ?? options.runtime.workingDirectory ?? options.runtime.root,
     env: {
       ...process.env,
       ...options.environment,
+      ...(options.pathPrefix === undefined ? {} : {
+        PATH: prependPath(options.environment?.PATH ?? process.env.PATH, options.pathPrefix),
+      }),
     },
     stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
     windowsHide: true,
   })
 
   return waitForReady(child, options.startupTimeoutMs ?? startupTimeoutMs)
-    .then(url => createServer(child, url, options.onUnexpectedExit))
+    .then(url => createServer(child, url, options.onUnexpectedExit, options.onIpcMessage))
 }
 
 function waitForReady(child: ChildProcess, timeoutMs: number): Promise<string> {
@@ -74,15 +86,21 @@ function waitForReady(child: ChildProcess, timeoutMs: number): Promise<string> {
     child.once('error', () => finish(() => reject(new Error('DSH 无法启动。'))))
     child.once('exit', code => {
       if (settled) return
-      finish(() => reject(new Error(`DSH 提前退出（退出码 ${code ?? '未知'}）。`)))
+      finish(() => reject(new Error(formatEarlyExitMessage(code, capturedOutput))))
     })
   })
 }
 
-function createServer(child: ChildProcess, url: string, onUnexpectedExit?: (message: string) => void): DshServer {
+export function isApplyPluginUpdatesIpc(message: unknown): boolean {
+  return message === APPLY_PLUGIN_UPDATES_IPC
+    || (typeof message === 'object' && message !== null && 'type' in message && message.type === APPLY_PLUGIN_UPDATES_IPC)
+}
+
+function createServer(child: ChildProcess, url: string, onUnexpectedExit?: (message: string) => void, onIpcMessage?: (message: unknown) => void): DshServer {
   let stopping = false
   let stopPromise: Promise<void> | undefined
 
+  child.on('message', message => { onIpcMessage?.(message) })
   child.once('exit', (code, signal) => {
     if (!stopping) onUnexpectedExit?.(`DSH 运行中断（退出码 ${code ?? '未知'}，信号 ${signal ?? '无'}）。`)
   })
@@ -122,6 +140,13 @@ function stopChild(child: ChildProcess): Promise<void> {
     }
     child.kill()
   })
+}
+
+function formatEarlyExitMessage(code: number | null, capturedOutput: string): string {
+  const detail = capturedOutput.replace(/\s+/g, ' ').trim()
+  return detail === ''
+    ? `DSH 提前退出（退出码 ${code ?? '未知'}）。`
+    : `DSH 提前退出（退出码 ${code ?? '未知'}）。${detail}`
 }
 
 async function waitForHttpHealth(url: string, timeoutMs: number): Promise<void> {

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 
-import { copyWorkspacePackages, resolveBundledNodeSha256 } from '../scripts/prepare-runtime.js'
+import { copyWorkspacePackages, pruneStoreForPackaging, removePreparedPath, resolveBundledNodeSha256, writePnpmShims } from '../scripts/prepare-runtime.js'
 
 test('按目标平台选择随包 Node 的 SHA256', () => {
   const checksums = {
@@ -52,4 +52,102 @@ test('跳过指向普通文件的工作区链接', async t => {
   } finally {
     await rm(root, { recursive: true, force: true })
   }
+})
+
+test('只把官方包复制进安装目录，社区插件不走这条路径', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-runtime-'))
+  try {
+    const packagesRoot = join(root, 'packages')
+    const official = join(packagesRoot, 'official', 'package')
+    const community = join(packagesRoot, 'community', 'package')
+    await mkdir(official, { recursive: true })
+    await mkdir(community, { recursive: true })
+    await writeFile(join(official, 'package.json'), JSON.stringify({ name: '@deepseek-ai/fixture' }), 'utf8')
+    await writeFile(join(community, 'package.json'), JSON.stringify({ name: '@michengai/dsh-codex-ui' }), 'utf8')
+    const runtimeRoot = join(root, 'runtime')
+    await copyWorkspacePackages(packagesRoot, 2, runtimeRoot)
+    assert.equal(existsSync(join(runtimeRoot, 'node_modules', '@deepseek-ai', 'fixture', 'package.json')), true)
+    assert.equal(existsSync(join(runtimeRoot, 'node_modules', '@michengai', 'dsh-codex-ui', 'package.json')), false)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('打包配置把离线插件仓库放到 extraResources', async () => {
+  const manifest = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8')) as {
+    build?: { extraResources?: { from?: string; to?: string }[] }
+  }
+  assert.equal(
+    manifest.build?.extraResources?.some(item => item.from === 'runtime-plugins/store.tgz' && item.to === 'plugins-store.tgz'),
+    true,
+  )
+})
+
+test('Windows 只写 pnpm.cmd，避免和 pnpm 包装目录撞名', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-pnpm-'))
+  try {
+    await mkdir(join(root, 'pnpm-package'), { recursive: true })
+    await writePnpmShims(root, 'bin/pnpm.cjs', 'win32')
+    assert.equal(existsSync(join(root, 'pnpm.cmd')), true)
+    assert.equal(existsSync(join(root, 'pnpm')), false)
+    const shim = await readFile(join(root, 'pnpm.cmd'), 'utf8')
+    assert.match(shim, /pnpm-package\\bin\\pnpm.cjs/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('打包前删除 pnpm store 的 projects 链接，避免 7zip 扫到断裂路径', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-store-'))
+  try {
+    const projects = join(root, 'v11', 'projects', 'broken')
+    const files = join(root, 'v11', 'files')
+    await mkdir(projects, { recursive: true })
+    await mkdir(files, { recursive: true })
+    await writeFile(join(files, 'keep.txt'), 'ok', 'utf8')
+    await pruneStoreForPackaging(root)
+    assert.equal(existsSync(projects), false)
+    assert.equal(existsSync(join(files, 'keep.txt')), true)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('安装器产品名、进程名和安装目录都使用 DSH Codex Desktop', async () => {
+  const manifest = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8')) as {
+    desktopName?: string
+    build?: { productName?: string, executableName?: string, nsis?: { include?: string, shortcutName?: string, uninstallDisplayName?: string } }
+  }
+  assert.equal(manifest.build?.productName, 'DSH Codex Desktop')
+  assert.equal(manifest.desktopName, 'DSH Codex Desktop')
+  assert.equal(manifest.build?.executableName, 'DSH Codex Desktop')
+  assert.equal(manifest.build?.nsis?.include, 'build/installer.nsh')
+  assert.equal(manifest.build?.nsis?.shortcutName, 'DSH Codex Desktop')
+  assert.equal(manifest.build?.nsis?.uninstallDisplayName, 'DSH Codex Desktop')
+  const installer = await readFile(new URL('../../build/installer.nsh', import.meta.url), 'utf8')
+  assert.match(installer, /APP_FILENAME/)
+  assert.match(installer, /onVerifyInstDir/)
+})
+
+test('打包配置把预装官方运行时放到 extraResources', async () => {
+  const manifest = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8')) as {
+    build?: { extraResources?: { from?: string; to?: string }[] }
+  }
+  assert.equal(
+    manifest.build?.extraResources?.some(item => item.from === 'runtime-dsh.tgz' && item.to === 'dsh-runtime.tgz'),
+    true,
+  )
+})
+
+test('清理运行时目录必须可重试，避免 Windows ENOTEMPTY', async () => {
+  const source = await readFile(new URL('../../scripts/prepare-runtime.ts', import.meta.url), 'utf8')
+  assert.match(source, /export async function removePreparedPath/)
+  assert.match(source, /maxRetries/)
+  assert.match(source, /await removePreparedPath\(target\)/)
+  const root = await mkdtemp(join(tmpdir(), 'dsh-rm-'))
+  const nested = join(root, 'pnpm-package', 'artifacts', 'exe', 'dist', 'node_modules', 'undici', 'lib')
+  await mkdir(nested, { recursive: true })
+  await writeFile(join(nested, 'keep.txt'), 'x', 'utf8')
+  await removePreparedPath(root)
+  assert.equal(existsSync(root), false)
 })
