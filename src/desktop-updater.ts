@@ -38,6 +38,38 @@ export function desktopUpdatePrompt(status: Extract<DesktopUpdateStatus, { kind:
   return `发现桌面端 ${status.version}。\n\n${DESKTOP_UPDATE_WARNING}${notes}`
 }
 
+/** 原生系统对话框不渲染 HTML 或 Markdown，发布说明统一转为可读文本。 */
+export function formatDesktopReleaseNotes(notes: string | Array<{ note?: string | null }> | null | undefined): string | undefined {
+  const source = typeof notes === 'string'
+    ? notes
+    : Array.isArray(notes)
+      ? notes.map(item => item.note ?? '').join('\n')
+      : ''
+  const text = source
+    .replace(/\r\n?/g, '\n')
+    .replace(/<\s*br\s*\/?\s*>/gi, '\n')
+    .replace(/<\/\s*(?:p|div|section|article|h[1-6])\s*>/gi, '\n\n')
+    .replace(/<\s*li\b[^>]*>/gi, '- ')
+    .replace(/<\/\s*li\s*>/gi, '\n')
+    .replace(/<\/\s*(?:ul|ol)\s*>/gi, '\n')
+    .replace(/<\/?[a-z][^>]*>/gi, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+    .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '$1: $2')
+    .replace(/\*\*|__|`/g, '')
+    .replace(/^>\s?/gm, '')
+    .replace(/^\s*[-*+]\s+/gm, '- ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+  return text === '' ? undefined : text
+}
+
 export function buildDesktopTrayItems(input: {
   status: DesktopUpdateStatus
   currentVersion: string

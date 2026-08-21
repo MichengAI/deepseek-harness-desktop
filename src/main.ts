@@ -20,7 +20,7 @@ import { applyInitialWindowState } from './window-state.js'
 import { installDesktopBridge, resolveDesktopBridgeDir } from './desktop-host.js'
 import { watchProfileActivation } from './profile-watch.js'
 import updater from 'electron-updater'
-import { buildDesktopTrayItems, desktopUpdateChannel, desktopUpdatePrompt, publicDesktopUpdateError, type DesktopUpdateStatus } from './desktop-updater.js'
+import { buildDesktopTrayItems, desktopUpdateChannel, desktopUpdatePrompt, formatDesktopReleaseNotes, publicDesktopUpdateError, type DesktopUpdateStatus } from './desktop-updater.js'
 
 interface DshProcessModule {
   isApplyPluginUpdatesIpc: (message: unknown) => boolean
@@ -496,7 +496,7 @@ async function checkDesktopUpdate(): Promise<void> {
       })
       return
     }
-    updateStatus = { kind: 'available', version, releaseNotes: releaseNotesText(result?.updateInfo.releaseNotes) }
+    updateStatus = { kind: 'available', version, releaseNotes: formatDesktopReleaseNotes(result?.updateInfo.releaseNotes) }
     refreshTrayMenu()
     const prompt = await dialog.showMessageBox({
       type: 'question',
@@ -552,15 +552,6 @@ async function downloadDesktopUpdate(): Promise<void> {
 
 async function installDesktopUpdate(): Promise<void> {
   await shutdownDesktop(() => { autoUpdater.quitAndInstall(false, true) })
-}
-
-function releaseNotesText(notes: string | Array<{ note?: string | null }> | null | undefined): string | undefined {
-  if (typeof notes === 'string' && notes.trim() !== '') return notes.trim()
-  if (Array.isArray(notes)) {
-    const text = notes.map(item => item.note ?? '').join('\n').trim()
-    if (text !== '') return text
-  }
-  return undefined
 }
 
 function showMainWindow(): void {
