@@ -187,8 +187,8 @@ test('官方运行时使用 npm 安装以兼容预发布 peer 依赖', () => {
 })
 
 test('npm 全局安装目录按平台归一化', () => {
-  assert.equal(officialRuntimeGlobalNodeModulesRoot('D:\\runtime', 'win32'), 'D:\\runtime\\node_modules')
-  assert.equal(officialRuntimeGlobalNodeModulesRoot('D:\\runtime', 'linux'), 'D:\\runtime\\lib\\node_modules')
+  assert.equal(officialRuntimeGlobalNodeModulesRoot('runtime', 'win32'), join('runtime', 'node_modules'))
+  assert.equal(officialRuntimeGlobalNodeModulesRoot('runtime', 'linux'), join('runtime', 'lib', 'node_modules'))
 })
 
 test('官方运行时仅以 DSH 入口包作为 npm 顶层依赖', () => {
