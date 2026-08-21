@@ -227,6 +227,7 @@ export function officialRuntimeInstallArgs(runtimeDir: string, storeDir?: string
     'install',
     '--dir=' + runtimeDir,
     '--prod',
+    '--no-frozen-lockfile',
     ...(storeDir === undefined ? [] : [`--store-dir=${storeDir}`]),
     '--config.node-linker=hoisted',
     '--config.auto-install-peers=true',

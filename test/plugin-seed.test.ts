@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import test from 'node:test'
 
 import { OFFICIAL_DSH_VERSION, OFFICIAL_LAUNCH_PEERS, OFFICIAL_RUNTIME, SUITE_PACKAGE, officialDshVersionOverrides } from '../src/bundled-plugins.js'
-import { applyPendingProfileUpdates, buildSeedPluginArgs, ensureAutoInstallPeersEnabled, isOfficialRuntimeLaunchable, missingOfficialLaunchPeers, planBundledPluginSeed, finalizeProfileBundlesAfterInstall, pruneMissingProfileBundles, resolvePnpmStoreDir, seedBundledPlugins, shouldUsePackagedStore, stripOfficialProfileDependencies, writeOfficialRuntimeManifest } from '../src/plugin-seed.js'
+import { applyPendingProfileUpdates, buildSeedPluginArgs, ensureAutoInstallPeersEnabled, isOfficialRuntimeLaunchable, missingOfficialLaunchPeers, officialRuntimeInstallArgs, planBundledPluginSeed, finalizeProfileBundlesAfterInstall, pruneMissingProfileBundles, resolvePnpmStoreDir, seedBundledPlugins, shouldUsePackagedStore, stripOfficialProfileDependencies, writeOfficialRuntimeManifest } from '../src/plugin-seed.js'
 
 const catalog = [
   { packageName: '@michengai/dsh-codex-ui', version: '0.2.58' },
@@ -435,4 +435,9 @@ test('官方 pending 会改运行时目录，不写进 Web profile', async () =>
   } finally {
     await rm(root, { recursive: true, force: true })
   }
+})
+
+test('官方运行时更新会同步锁文件，避免 CI 冻结锁文件阻断启动', () => {
+  const args = officialRuntimeInstallArgs('D:\\runtime')
+  assert.equal(args.includes('--no-frozen-lockfile'), true)
 })
