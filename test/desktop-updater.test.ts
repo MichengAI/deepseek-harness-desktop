@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
-import { buildDesktopTrayItems, DESKTOP_UPDATE_WARNING, desktopUpdateChannel, desktopUpdatePrompt, publicDesktopUpdateError } from '../src/desktop-updater.js'
+import { buildDesktopTrayItems, DESKTOP_UPDATE_WARNING, desktopUpdateChannel, desktopUpdatePrompt, formatDesktopReleaseNotes, publicDesktopUpdateError } from '../src/desktop-updater.js'
 
 test('开发态和空闲态都提供手动检查，不自动下载', () => {
   const idle = buildDesktopTrayItems({ status: { kind: 'idle' }, currentVersion: '0.1.4', packaged: true })
@@ -38,6 +38,11 @@ test('更新说明描述桌面应用更新，不混用官方运行时警告', ()
   assert.match(text, /0\.1\.5/)
   assert.match(text, new RegExp(DESKTOP_UPDATE_WARNING))
   assert.match(text, /修复托盘/)
+})
+
+test('更新说明将 GitHub 的 HTML 和 Markdown 转为支持中英文的纯文本', () => {
+  const notes = formatDesktopReleaseNotes('<p><strong>更新说明</strong></p><ul><li>修复中文显示</li><li><a href="https://github.com/MichengAI/dsh-codex-desktop/compare/v1.0.13...v1.0.14">Full Changelog</a></li></ul>\n\n## English\n- [Install guide](https://example.com/install)')
+  assert.equal(notes, '更新说明\n- 修复中文显示\n- Full Changelog\nEnglish\n- Install guide: https://example.com/install')
 })
 
 test('macOS 更新通道按 CPU 架构隔离', () => {
