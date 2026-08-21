@@ -182,7 +182,7 @@ test('官方运行时使用 npm 安装以兼容预发布 peer 依赖', () => {
     '--no-audit',
     '--no-fund',
     '--registry=https://registry.npmjs.org/',
-    '@deepseek-ai/dsh@0.1.1-rc.1',
+    '@deepseek-ai/dsh@0.1.1-rc.2',
   ])
 })
 
@@ -193,7 +193,7 @@ test('npm 全局安装目录按平台归一化', () => {
 
 test('官方运行时仅以 DSH 入口包作为 npm 顶层依赖', () => {
   assert.deepEqual(officialRuntimeNpmDependencies(), {
-    '@deepseek-ai/dsh': '0.1.1-rc.1',
+    '@deepseek-ai/dsh': '0.1.1-rc.2',
   })
 })
 

@@ -1,6 +1,6 @@
 {
   "name": "deepseek-harness-desktop",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "description": "DeepSeek Harness 原生桌面启动器",
   "author": "MichengAI",
   "desktopName": "DSH Codex Desktop",
@@ -20,7 +20,7 @@
       "darwin-x64": "1052EB9C7D6C60A79B968E09F75AF55A73462B0F6DFF0964336D63B5E13EB63C",
       "linux-x64": "BC17C508FFEED0EC622934F9B7FA72F8E78DA65350E63C3ECEB56FA688AA5E12"
     },
-    "bundledDshVersion": "0.1.1-rc.1"
+    "bundledDshVersion": "0.1.1-rc.2"
   },
   "main": "dist/src/main.js",
   "scripts": {

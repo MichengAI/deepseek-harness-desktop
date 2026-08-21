@@ -251,7 +251,7 @@ export function installDesktopBridge(profileDir: string, sourceDir: string): voi
 }
 
 export function mergeDesktopBridgePatch(current: string): string {
-  const entry = `- id: ${DESKTOP_BRIDGE_PACKAGE}\n  name: ${DESKTOP_BRIDGE_PACKAGE}`
+  const entry = `- insert:\n  - id: ${DESKTOP_BRIDGE_PACKAGE}\n    name: ${DESKTOP_BRIDGE_PACKAGE}`
   const lines = current.replace(/\r\n/g, '\n').split('\n')
   const comments = lines.filter((line) => line.trim().startsWith('#'))
   const body = lines.filter((line) => {
@@ -259,9 +259,12 @@ export function mergeDesktopBridgePatch(current: string): string {
     return trimmed !== '' && !trimmed.startsWith('#')
   }).join('\n').trim()
   const rest = body === '[]' ? '' : body.replace(/(?:^|\n)\[\]\s*$/g, '').trim()
-  const items = rest.includes(DESKTOP_BRIDGE_PACKAGE)
-    ? rest
-    : rest === '' ? entry : `${entry}\n${rest}`
+  const legacyEntry = new RegExp(`(?:^|\\n)- id: ${DESKTOP_BRIDGE_PACKAGE}\\n  name: ${DESKTOP_BRIDGE_PACKAGE}(?=\\n|$)`, 'g')
+  const normalized = rest.replace(legacyEntry, '').trim()
+  const hasEntry = normalized.includes(`- insert:\n  - id: ${DESKTOP_BRIDGE_PACKAGE}\n    name: ${DESKTOP_BRIDGE_PACKAGE}`)
+  const items = hasEntry
+    ? normalized
+    : normalized === '' ? entry : `${entry}\n${normalized}`
   const header = comments.length > 0 ? `${comments.join('\n')}\n` : ''
   return `${header}${items}\n`
 }

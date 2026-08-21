@@ -127,6 +127,7 @@ test('会把桌面桥接插件写进 profile patch 顶部', async () => {
   try {
     ensureDesktopBridgePatch(root)
     const patch = await readFile(join(root, 'cordis.patch.yml'), 'utf8')
+    assert.match(patch, /- insert:\n  - id: dsh-desktop-bridge\n    name: dsh-desktop-bridge/)
     assert.match(patch, /id: dsh-desktop-bridge/)
   } finally {
     await rm(root, { recursive: true, force: true })
@@ -143,7 +144,8 @@ test('带注释的空 patch 不会再拼出非法 YAML', () => {
 test('已损坏的 bridge+空数组 patch 会被修回合法 YAML', () => {
   const broken = '- id: dsh-desktop-bridge\n  name: dsh-desktop-bridge\n# note\n[]\n'
   const next = mergeDesktopBridgePatch(broken)
-  assert.match(next, /name: dsh-desktop-bridge/)
+  assert.match(next, /- insert:\n  - id: dsh-desktop-bridge\n    name: dsh-desktop-bridge/)
+  assert.doesNotMatch(next, /^- id: dsh-desktop-bridge$/m)
   assert.doesNotMatch(next, /^\[\]/m)
 })
 
