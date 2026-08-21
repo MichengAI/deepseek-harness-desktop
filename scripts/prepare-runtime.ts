@@ -189,6 +189,12 @@ export async function stageOfficialRuntime(destinationRoot: string, nodeRoot: st
   }, undefined, 2) + '\n', 'utf8')
   await writeFile(join(destinationRoot, 'pnpm-workspace.yaml'), pnpmWorkspaceYaml(), 'utf8')
   runCurrentNpm(officialRuntimeNpmInstallArgs(destinationRoot))
+  const installedNodeModules = officialRuntimeGlobalNodeModulesRoot(destinationRoot)
+  const runtimeNodeModules = join(destinationRoot, 'node_modules')
+  if (installedNodeModules !== runtimeNodeModules) {
+    await cp(installedNodeModules, runtimeNodeModules, { dereference: true, recursive: true })
+    await removePreparedPath(join(destinationRoot, 'lib'))
+  }
   const entry = join(destinationRoot, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js')
   if (!existsSync(entry)) throw new Error('预装官方运行时后仍未找到入口。')
   if (!existsSync(join(destinationRoot, 'node_modules', ...OFFICIAL_RUNTIME.packageName.split('/'), 'package.json'))) {
@@ -213,6 +219,13 @@ export function officialRuntimeNpmInstallArgs(destinationRoot: string): string[]
     '--registry=https://registry.npmjs.org/',
     `${OFFICIAL_RUNTIME.packageName}@${OFFICIAL_RUNTIME.version}`,
   ]
+}
+
+/** npm 全局安装在 Unix 位于 lib/node_modules，Windows 则直接位于 node_modules。 */
+export function officialRuntimeGlobalNodeModulesRoot(destinationRoot: string, platform = process.platform): string {
+  return platform === 'win32'
+    ? join(destinationRoot, 'node_modules')
+    : join(destinationRoot, 'lib', 'node_modules')
 }
 
 export async function pruneStoreForPackaging(storeDir: string): Promise<void> {

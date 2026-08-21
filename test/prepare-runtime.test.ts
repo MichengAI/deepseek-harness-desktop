@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import test from 'node:test'
 import { pathToFileURL } from 'node:url'
 
-import { copyWorkspacePackages, officialRuntimeNpmDependencies, officialRuntimeNpmInstallArgs, pruneStoreForPackaging, removePreparedPath, resolveBundledNodeSha256, writePnpmShims } from '../scripts/prepare-runtime.js'
+import { copyWorkspacePackages, officialRuntimeGlobalNodeModulesRoot, officialRuntimeNpmDependencies, officialRuntimeNpmInstallArgs, pruneStoreForPackaging, removePreparedPath, resolveBundledNodeSha256, writePnpmShims } from '../scripts/prepare-runtime.js'
 import { DESKTOP_BRIDGE_FILES } from '../src/desktop-host.js'
 
 test('按目标平台选择随包 Node 的 SHA256', () => {
@@ -184,6 +184,11 @@ test('官方运行时使用 npm 安装以兼容预发布 peer 依赖', () => {
     '--registry=https://registry.npmjs.org/',
     '@deepseek-ai/dsh@0.1.1-rc.1',
   ])
+})
+
+test('npm 全局安装目录按平台归一化', () => {
+  assert.equal(officialRuntimeGlobalNodeModulesRoot('D:\\runtime', 'win32'), 'D:\\runtime\\node_modules')
+  assert.equal(officialRuntimeGlobalNodeModulesRoot('D:\\runtime', 'linux'), 'D:\\runtime\\lib\\node_modules')
 })
 
 test('官方运行时仅以 DSH 入口包作为 npm 顶层依赖', () => {
