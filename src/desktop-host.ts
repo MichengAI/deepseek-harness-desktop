@@ -83,7 +83,7 @@ export function shouldRecycleAfterPluginResult(
 }
 
 export function createDesktopHostServices(options: DesktopHostOptions) {
-  const runPlugin = (args: readonly string[], invokingDir: string, signal?: AbortSignal): DesktopPnpmHandle => {
+  const runPlugin = (args: readonly string[], _invokingDir: string, signal?: AbortSignal): DesktopPnpmHandle => {
     const officialSpecs = officialPluginCommandSpecs(args)
     const communitySpecs = pluginCommandPackageNames(args).filter(name => !isDeepSeekOfficialPackage(name))
     if (officialSpecs.length > 0 && communitySpecs.length > 0) {
@@ -108,7 +108,7 @@ export function createDesktopHostServices(options: DesktopHostOptions) {
         : '官方依赖随桌面运行时统一更新，不能单独安装到 Web profile。\n'
       return completedPnpmHandle(1, message)
     }
-    const handle = (options.runner ?? runBundledPnpm)(args, invokingDir, signal)
+    const handle = (options.runner ?? runBundledPnpm)(args, options.profileDir, signal)
     void handle.done.then(async (outcome) => {
       if (outcome.exitCode !== 0) return
       const isInstalled = options.isInstalled ?? ((packageName) => existsSync(join(options.profileDir, 'node_modules', ...packageName.split('/'), 'package.json')))

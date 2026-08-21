@@ -55,6 +55,30 @@ test('desktopPnpm 安装成功后通知桌面端热更新', async () => {
   assert.deepEqual(sent, [APPLY_PLUGIN_UPDATES_IPC])
 })
 
+test('桌面插件命令必须在 profile 根目录执行', async () => {
+  const profileDir = 'D:\\profile\\web'
+  let workingDirectory = ''
+  const host = createDesktopHostServices({
+    profileName: 'web',
+    profileDir,
+    runner: (_args, cwd) => {
+      workingDirectory = cwd
+      const stdout = new PassThrough()
+      const stderr = new PassThrough()
+      stdout.end()
+      stderr.end()
+      return {
+        stdout,
+        stderr,
+        done: Promise.resolve({ exitCode: 0, signal: null }),
+        cancel: () => undefined,
+      }
+    },
+  })
+  await host.desktopPnpm.runPlugin(['add', '-w', 'dshmarket@latest'], 'D:\\runtime').done
+  assert.equal(workingDirectory, profileDir)
+})
+
 test('安装失败时不得把残留包写进运行清单或重启', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dsh-failed-install-'))
   try {
