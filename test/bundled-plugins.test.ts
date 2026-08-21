@@ -31,7 +31,7 @@ test('每个内置插件都钉死精确版本', () => {
   }
   assert.equal(BUNDLED_PLUGINS.find(plugin => plugin.packageName === 'dshmarket')?.version, '1.17.1')
   assert.deepEqual(Object.fromEntries(BUNDLED_PLUGINS.map(plugin => [plugin.packageName, plugin.version])), {
-    '@michengai/dsh-codex-ui': '0.2.66',
+    '@michengai/dsh-codex-ui': '0.2.68',
     '@michengai/dsh-im-connect': '0.1.13',
     '@michengai/dsh-automation': '0.1.5',
     '@michengai/dsh-skills-manager': '0.1.23',

@@ -26,7 +26,7 @@ export const OFFICIAL_LAUNCH_PEERS: readonly BundledPlugin[] = [
 ]
 /** 随桌面端离线仓库分发的六个社区插件和插件市场。 */
 export const BUNDLED_PLUGINS: readonly BundledPlugin[] = [
-  { packageName: '@michengai/dsh-codex-ui', version: '0.2.66' },
+  { packageName: '@michengai/dsh-codex-ui', version: '0.2.68' },
   { packageName: '@michengai/dsh-im-connect', version: '0.1.13' },
   { packageName: '@michengai/dsh-automation', version: '0.1.5' },
   { packageName: '@michengai/dsh-skills-manager', version: '0.1.23' },

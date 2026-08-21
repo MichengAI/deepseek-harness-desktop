@@ -494,11 +494,13 @@ export async function reconcileProfileBundles(profileDir: string, packageNames?:
     if (!isOfficialProfileDependency(name)) return true
     return (OFFICIAL_PROFILE_BUNDLES as readonly string[]).includes(name)
   })
+  const marketDisabled = readMarketDisabledPackages(profileDir)
   let changed = false
   const allowed = packageNames === undefined ? undefined : new Set(packageNames)
   for (const packageName of Object.keys(manifest.dependencies ?? {})) {
     if (allowed !== undefined && !allowed.has(packageName)) continue
     if (isOfficialProfileDependency(packageName) || packageName === SUITE_PACKAGE) continue
+    if (marketDisabled.has(packageName)) continue
     if (!hasBundleManifest(profileDir, packageName) || bundles.includes(packageName)) continue
     bundles.push(packageName)
     changed = true
@@ -508,6 +510,16 @@ export async function reconcileProfileBundles(profileDir: string, packageNames?:
     await writeTextFileAtomic(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`)
   }
   return bundles
+}
+
+/** 插件市场已禁用的 bundle 不能在桌面启动补种时被重新激活。 */
+function readMarketDisabledPackages(profileDir: string): ReadonlySet<string> {
+  try {
+    const state = JSON.parse(readFileSync(join(profileDir, '.dsh-market', 'state.json'), 'utf8')) as { disabled?: unknown }
+    return new Set(Array.isArray(state.disabled) ? state.disabled.filter((name): name is string => typeof name === 'string') : [])
+  } catch {
+    return new Set()
+  }
 }
 
 /** 未声明或缺包的社区 bundle 会让 DSH 直接退出；启动前摘掉，官方 bundle 仍由运行时解析。 */

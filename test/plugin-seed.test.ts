@@ -376,6 +376,29 @@ test('先认磁盘上的包，再更新 bundle 列表', async () => {
   }
 })
 
+test('插件市场禁用 bundle 插件后，启动补种不得把它重新加入清单', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-disabled-bundle-'))
+  try {
+    await mkdir(join(root, 'node_modules', 'ready-plugin'), { recursive: true })
+    await mkdir(join(root, '.dsh-market'), { recursive: true })
+    await writeFile(join(root, 'node_modules', 'ready-plugin', 'package.json'), JSON.stringify({
+      name: 'ready-plugin',
+      dsh: { bundle: { patch: 'cordis.patch.yml' } },
+    }), 'utf8')
+    await writeFile(join(root, '.dsh-market', 'state.json'), JSON.stringify({
+      disabled: ['ready-plugin'], groups: {}, groupOrder: [],
+    }), 'utf8')
+    await writeFile(join(root, 'package.json'), JSON.stringify({
+      dependencies: { 'ready-plugin': '1.0.0' },
+      dsh: { profile: { bundles: ['@deepseek-ai/dsh-base'] } },
+    }), 'utf8')
+    const result = await finalizeProfileBundlesAfterInstall(root)
+    assert.equal(result.bundles.includes('ready-plugin'), false)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('启动补种 pnpm 超时后会终止并返回明确错误', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dsh-seed-timeout-'))
   try {
