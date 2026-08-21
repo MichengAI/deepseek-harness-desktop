@@ -5,7 +5,7 @@ import { cp, mkdir, readFile, readdir, realpath, rm, stat, writeFile } from 'nod
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { OFFICIAL_LAUNCH_PEERS, OFFICIAL_RUNTIME, officialRuntimePnpmConfig, pnpmWorkspaceYaml, STORE_PACKAGES } from '../src/bundled-plugins.js'
+import { OFFICIAL_RUNTIME, officialRuntimePnpmConfig, pnpmWorkspaceYaml, STORE_PACKAGES } from '../src/bundled-plugins.js'
 import { extractTarGz, packDirectoryToTarGz, writeFileSha256 } from '../src/runtime-archive.js'
 
 const projectRoot = resolve(import.meta.dirname, '..', '..')
@@ -181,37 +181,38 @@ export async function stageOfficialRuntime(destinationRoot: string, nodeRoot: st
   if (!destinationRoot.startsWith(projectRoot + sep)) throw new Error(`拒绝写入项目外路径：${destinationRoot}`)
   await removePreparedPath(destinationRoot)
   await mkdir(destinationRoot, { recursive: true })
-  const packages = [OFFICIAL_RUNTIME, ...OFFICIAL_LAUNCH_PEERS]
   await writeFile(join(destinationRoot, 'package.json'), JSON.stringify({
     name: 'dsh-desktop-runtime',
     private: true,
     pnpm: officialRuntimePnpmConfig(),
-    dependencies: Object.fromEntries(packages.map(plugin => [plugin.packageName, plugin.version])),
+    dependencies: officialRuntimeNpmDependencies(),
   }, undefined, 2) + '\n', 'utf8')
   await writeFile(join(destinationRoot, 'pnpm-workspace.yaml'), pnpmWorkspaceYaml(), 'utf8')
-  const installArgs = [
-    'install',
-    '--dir', destinationRoot,
-    '--store-dir', storeDir,
-    '--prod',
-    '--config.node-linker=hoisted',
-    '--config.auto-install-peers=true',
-    '--config.package-import-method=copy',
-    '--config.minimumReleaseAge=0',
-    '--registry=https://registry.npmjs.org/',
-  ]
-  try {
-    runStagedPnpm(nodeRoot, [...installArgs, '--offline'])
-  } catch {
-    runStagedPnpm(nodeRoot, installArgs)
-  }
+  runCurrentNpm(officialRuntimeNpmInstallArgs(destinationRoot))
   const entry = join(destinationRoot, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js')
   if (!existsSync(entry)) throw new Error('预装官方运行时后仍未找到入口。')
-  for (const plugin of packages) {
-    if (!existsSync(join(destinationRoot, 'node_modules', ...plugin.packageName.split('/'), 'package.json'))) {
-      throw new Error(`预装官方运行时缺少依赖：${plugin.packageName}`)
-    }
+  if (!existsSync(join(destinationRoot, 'node_modules', ...OFFICIAL_RUNTIME.packageName.split('/'), 'package.json'))) {
+    throw new Error(`预装官方运行时缺少依赖：${OFFICIAL_RUNTIME.packageName}`)
   }
+}
+
+/** 官方预发布包存在 pnpm 无法解析的 peer 范围，运行时打包统一改用 npm。 */
+export function officialRuntimeNpmDependencies(): Record<string, string> {
+  return { [OFFICIAL_RUNTIME.packageName]: OFFICIAL_RUNTIME.version }
+}
+
+export function officialRuntimeNpmInstallArgs(destinationRoot: string): string[] {
+  return [
+    'install',
+    '--global',
+    '--prefix=' + destinationRoot,
+    '--omit=dev',
+    '--package-lock=false',
+    '--no-audit',
+    '--no-fund',
+    '--registry=https://registry.npmjs.org/',
+    `${OFFICIAL_RUNTIME.packageName}@${OFFICIAL_RUNTIME.version}`,
+  ]
 }
 
 export async function pruneStoreForPackaging(storeDir: string): Promise<void> {
@@ -263,6 +264,16 @@ function runStagedPnpm(nodeRoot: string, args: readonly string[]): void {
   const nodeExecutable = join(nodeRoot, process.platform === 'win32' ? 'node.exe' : 'node')
   const result = spawnSync(nodeExecutable, [resolvePnpmEntry(join(nodeRoot, 'pnpm-package')), ...args], { stdio: 'inherit' })
   if (result.status !== 0) throw new Error(`随包 pnpm 执行失败（退出码 ${result.status ?? '未知'}）。`)
+}
+
+function runCurrentNpm(args: readonly string[]): void {
+  const entry = [
+    join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+    join(dirname(dirname(process.execPath)), 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+  ].find(path => existsSync(path))
+  if (entry === undefined) throw new Error('未找到当前 Node 附带的 npm CLI。')
+  const result = spawnSync(process.execPath, [entry, ...args], { stdio: 'inherit', windowsHide: true })
+  if (result.status !== 0) throw new Error(`npm ${args[0]} 失败（退出码 ${result.status ?? '未知'}）。`)
 }
 
 function runCurrentPnpm(args: readonly string[]): { stdout: string } {

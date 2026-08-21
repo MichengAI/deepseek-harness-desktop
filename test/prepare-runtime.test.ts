@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import test from 'node:test'
 import { pathToFileURL } from 'node:url'
 
-import { copyWorkspacePackages, pruneStoreForPackaging, removePreparedPath, resolveBundledNodeSha256, writePnpmShims } from '../scripts/prepare-runtime.js'
+import { copyWorkspacePackages, officialRuntimeNpmDependencies, officialRuntimeNpmInstallArgs, pruneStoreForPackaging, removePreparedPath, resolveBundledNodeSha256, writePnpmShims } from '../scripts/prepare-runtime.js'
 import { DESKTOP_BRIDGE_FILES } from '../src/desktop-host.js'
 
 test('按目标平台选择随包 Node 的 SHA256', () => {
@@ -170,6 +170,26 @@ test('打包配置显式映射完整编译产物', async () => {
 test('Windows 冒烟检查使用实际产品可执行文件名', async () => {
   const workflow = await readFile(new URL('../../.github/workflows/desktop-package.yml', import.meta.url), 'utf8')
   assert.match(workflow, /release\\win-unpacked\\DSH Codex Desktop\.exe/)
+})
+
+test('官方运行时使用 npm 安装以兼容预发布 peer 依赖', () => {
+  assert.deepEqual(officialRuntimeNpmInstallArgs('D:\\runtime'), [
+    'install',
+    '--global',
+    '--prefix=D:\\runtime',
+    '--omit=dev',
+    '--package-lock=false',
+    '--no-audit',
+    '--no-fund',
+    '--registry=https://registry.npmjs.org/',
+    '@deepseek-ai/dsh@0.1.1-rc.1',
+  ])
+})
+
+test('官方运行时仅以 DSH 入口包作为 npm 顶层依赖', () => {
+  assert.deepEqual(officialRuntimeNpmDependencies(), {
+    '@deepseek-ai/dsh': '0.1.1-rc.1',
+  })
 })
 
 test('Windows 冒烟在启动应用前复用安装器的运行时解压入口', async () => {

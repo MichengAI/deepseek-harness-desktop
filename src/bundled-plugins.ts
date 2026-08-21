@@ -8,7 +8,7 @@ export interface BundledPlugin {
 }
 
 /** 官方 DSH 家族统一锁死的版本。打包和在线升级都按这一个号对齐。 */
-export const OFFICIAL_DSH_VERSION = '0.1.0-rc.8'
+export const OFFICIAL_DSH_VERSION = '0.1.1-rc.1'
 export const APPLY_PLUGIN_UPDATES_IPC = 'apply-plugin-updates'
 
 /** 官方 DSH 运行时。从 npm 安装，不依赖本地 deepseek-harness 源码。 */
@@ -26,13 +26,13 @@ export const OFFICIAL_LAUNCH_PEERS: readonly BundledPlugin[] = [
 ]
 /** 随桌面端离线仓库分发的六个社区插件和插件市场。 */
 export const BUNDLED_PLUGINS: readonly BundledPlugin[] = [
-  { packageName: '@michengai/dsh-codex-ui', version: '0.2.64' },
+  { packageName: '@michengai/dsh-codex-ui', version: '0.2.66' },
   { packageName: '@michengai/dsh-im-connect', version: '0.1.13' },
   { packageName: '@michengai/dsh-automation', version: '0.1.5' },
   { packageName: '@michengai/dsh-skills-manager', version: '0.1.23' },
   { packageName: '@michengai/dsh-archive-manager', version: '0.1.12' },
   { packageName: '@michengai/dsh-agency-agents', version: '0.1.20' },
-  { packageName: 'dshmarket', version: '1.16.0' },
+  { packageName: 'dshmarket', version: '1.17.1' },
 ]
 
 /** 离线 store 只放社区插件，官方运行时单独预装，避免安装包把同一份依赖打两遍。 */
