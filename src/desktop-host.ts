@@ -73,13 +73,46 @@ export function officialPluginUpdateVersion(args: readonly string[]): string | u
 export function shouldRecycleAfterPluginResult(
   args: readonly string[],
   isInstalled: (packageName: string) => boolean,
+  beforeProfileState?: string,
+  afterProfileState?: string,
 ): boolean {
   const action = pluginCommandAction(args)
   if (action === 'other') return false
-  if (action === 'remove') return true
   const names = pluginCommandPackageNames(args)
+  if (action !== 'remove' && names.length > 0 && !names.every((name) => isInstalled(name))) return false
+  if (beforeProfileState !== undefined && afterProfileState !== undefined) return beforeProfileState !== afterProfileState
+  if (action === 'remove') return true
   if (names.length === 0) return true
-  return names.every((name) => isInstalled(name))
+  return true
+}
+
+/** 仅比较本次命令涉及的运行时状态，避免 pnpm 未替换版本时误重载 DSH。 */
+function profilePackageState(profileDir: string, packageNames: readonly string[]): string | undefined {
+  try {
+    const manifest = JSON.parse(readFileSync(join(profileDir, 'package.json'), 'utf8')) as {
+      dependencies?: Record<string, string>
+      dsh?: { profile?: { bundles?: string[] } }
+    }
+    const dependencies = manifest.dependencies ?? {}
+    const bundles = new Set(manifest.dsh?.profile?.bundles ?? [])
+    return JSON.stringify(packageNames.map((name) => ({
+      name,
+      dependency: dependencies[name],
+      bundled: bundles.has(name),
+      version: installedPackageVersion(profileDir, name),
+    })))
+  } catch {
+    return undefined
+  }
+}
+
+function installedPackageVersion(profileDir: string, packageName: string): string | undefined {
+  try {
+    const manifest = JSON.parse(readFileSync(join(profileDir, 'node_modules', ...packageName.split('/'), 'package.json'), 'utf8')) as { version?: unknown }
+    return typeof manifest.version === 'string' ? manifest.version : undefined
+  } catch {
+    return undefined
+  }
 }
 
 export function createDesktopHostServices(options: DesktopHostOptions) {
@@ -108,13 +141,15 @@ export function createDesktopHostServices(options: DesktopHostOptions) {
         : '官方依赖随桌面运行时统一更新，不能单独安装到 Web profile。\n'
       return completedPnpmHandle(1, message)
     }
+    const packageNames = pluginCommandPackageNames(args)
+    const beforeProfileState = packageNames.length === 0 ? undefined : profilePackageState(options.profileDir, packageNames)
     const handle = (options.runner ?? runBundledPnpm)(args, options.profileDir, signal)
     void handle.done.then(async (outcome) => {
       if (outcome.exitCode !== 0) return
       const isInstalled = options.isInstalled ?? ((packageName) => existsSync(join(options.profileDir, 'node_modules', ...packageName.split('/'), 'package.json')))
-      const packageNames = pluginCommandPackageNames(args)
       await finalizeProfileBundlesAfterInstall(options.profileDir, [], packageNames.length === 0 ? undefined : packageNames)
-      if (!shouldRecycleAfterPluginResult(args, isInstalled)) return
+      const afterProfileState = packageNames.length === 0 ? undefined : profilePackageState(options.profileDir, packageNames)
+      if (!shouldRecycleAfterPluginResult(args, isInstalled, beforeProfileState, afterProfileState)) return
       const delay = options.recycleDelayMs ?? 400
       setTimeout(() => {
         options.send?.(APPLY_PLUGIN_UPDATES_IPC)

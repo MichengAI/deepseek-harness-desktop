@@ -55,6 +55,85 @@ test('desktopPnpm 安装成功后通知桌面端热更新', async () => {
   assert.deepEqual(sent, [APPLY_PLUGIN_UPDATES_IPC])
 })
 
+test('pnpm 成功但插件版本未变化时不应重载 DSH', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-stale-update-'))
+  try {
+    await mkdir(join(root, 'node_modules', 'dsh-better-sidebar'), { recursive: true })
+    await writeFile(join(root, 'package.json'), JSON.stringify({
+      dependencies: { 'dsh-better-sidebar': '^0.14.0' },
+      dsh: { profile: { bundles: ['dsh-better-sidebar'] } },
+    }), 'utf8')
+    await writeFile(join(root, 'node_modules', 'dsh-better-sidebar', 'package.json'), JSON.stringify({
+      name: 'dsh-better-sidebar',
+      version: '0.14.0',
+    }), 'utf8')
+    const sent: unknown[] = []
+    const host = createDesktopHostServices({
+      profileName: 'web',
+      profileDir: root,
+      recycleDelayMs: 0,
+      send: (message) => { sent.push(message) },
+      runner: () => {
+        const stdout = new PassThrough()
+        const stderr = new PassThrough()
+        stdout.end()
+        stderr.end()
+        return {
+          stdout,
+          stderr,
+          done: Promise.resolve({ exitCode: 0, signal: null }),
+          cancel: () => undefined,
+        }
+      },
+    })
+
+    await host.desktopPnpm.runPlugin(['add', 'dsh-better-sidebar'], root).done
+    await new Promise(resolve => setTimeout(resolve, 30))
+    assert.deepEqual(sent, [])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('pnpm 成功且插件版本变化时应重载 DSH', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-version-update-'))
+  try {
+    await mkdir(join(root, 'node_modules', 'dsh-better-sidebar'), { recursive: true })
+    await writeFile(join(root, 'package.json'), JSON.stringify({
+      dependencies: { 'dsh-better-sidebar': '^0.14.0' },
+      dsh: { profile: { bundles: ['dsh-better-sidebar'] } },
+    }), 'utf8')
+    const packagePath = join(root, 'node_modules', 'dsh-better-sidebar', 'package.json')
+    await writeFile(packagePath, JSON.stringify({ name: 'dsh-better-sidebar', version: '0.14.0' }), 'utf8')
+    const sent: unknown[] = []
+    const host = createDesktopHostServices({
+      profileName: 'web',
+      profileDir: root,
+      recycleDelayMs: 0,
+      send: (message) => { sent.push(message) },
+      runner: () => {
+        const stdout = new PassThrough()
+        const stderr = new PassThrough()
+        stdout.end()
+        stderr.end()
+        return {
+          stdout,
+          stderr,
+          done: writeFile(packagePath, JSON.stringify({ name: 'dsh-better-sidebar', version: '0.14.1' }), 'utf8')
+            .then(() => ({ exitCode: 0, signal: null })),
+          cancel: () => undefined,
+        }
+      },
+    })
+
+    await host.desktopPnpm.runPlugin(['add', 'dsh-better-sidebar'], root).done
+    await waitFor(() => sent.length === 1)
+    assert.deepEqual(sent, [APPLY_PLUGIN_UPDATES_IPC])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('桌面插件命令必须在 profile 根目录执行', async () => {
   const profileDir = 'D:\\profile\\web'
   let workingDirectory = ''
